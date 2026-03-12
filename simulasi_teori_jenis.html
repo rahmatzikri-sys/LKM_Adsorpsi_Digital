@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulasi Chemisorption vs Physisorption</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #111;
+            color: white;
+            user-select: none;
+        }
+
+        .split-container {
+            display: flex;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        .panel {
+            position: relative;
+            flex: 1;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        #panel-left {
+            background: linear-gradient(to bottom, #450a0a, #1a0505);
+        }
+
+        #panel-right {
+            background: linear-gradient(to bottom, #0c4a6e, #082f49);
+        }
+
+        .header-label {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            z-index: 10;
+            width: 90%;
+            pointer-events: none;
+        }
+
+        /* Tampilan Tombol Bahasa */
+        .lang-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            display: flex;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        .lang-btn {
+            padding: 8px 16px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            color: #ccc;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .lang-btn:hover {
+            color: white;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .lang-btn.active {
+            background: #0ea5e9; /* Warna biru sky Tailwind */
+            color: white;
+        }
+
+        .controls {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            display: flex;
+            gap: 15px;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        .overlay-info {
+            position: absolute;
+            top: 130px;
+            left: 20px;
+            background: rgba(0,0,0,0.8);
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            max-width: 240px;
+            border-left: 4px solid #fff;
+            pointer-events: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            z-index: 20;
+        }
+
+        .click-hint {
+            position: absolute;
+            bottom: 100px;
+            right: 20px;
+            background: rgba(14, 165, 233, 0.2);
+            border: 1px solid rgba(14, 165, 233, 0.5);
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            color: #7dd3fc;
+            animation: pulse 2s infinite;
+            pointer-events: none;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.4; }
+            50% { opacity: 1; }
+            100% { opacity: 0.4; }
+        }
+
+        button {
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        button:hover {
+            transform: scale(1.05);
+            filter: brightness(1.1);
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Tombol Toggle Bahasa -->
+    <div class="lang-toggle">
+        <button id="btn-id" class="lang-btn active" onclick="setLanguage('id')">ID</button>
+        <button id="btn-en" class="lang-btn" onclick="setLanguage('en')">EN</button>
+    </div>
+
+    <div class="controls">
+        <button id="startBtn" data-i18n="btn_start" class="bg-emerald-600 text-white px-8 py-3 rounded-full font-bold shadow-xl uppercase tracking-wider">
+            MULAI SIMULASI
+        </button>
+        <button id="resetBtn" data-i18n="btn_reset" class="bg-gray-700 text-white px-8 py-3 rounded-full font-bold shadow-xl uppercase tracking-wider">
+            RESET
+        </button>
+    </div>
+
+    <div class="split-container">
+        <!-- Panel Kiri: Chemisorption -->
+        <div id="panel-left" class="panel">
+            <div class="header-label">
+                <h2 class="text-3xl font-black text-red-500 drop-shadow-lg" data-i18n="chem_title">CHEMISORPTION</h2>
+                <p class="text-xs text-red-200 uppercase tracking-widest font-semibold" data-i18n="chem_subtitle">Ikatan Kimia (Monolayer)</p>
+            </div>
+            <div class="overlay-info border-red-500">
+                <p class="mb-1 font-bold text-red-400" data-i18n="mech_title">Mekanisme:</p>
+                <p data-i18n="chem_point1">• <strong>Spesifik:</strong> Hanya di situs aktif pori.</p>
+                <p data-i18n="chem_point2">• <strong>Monolayer:</strong> Terbatas satu lapis.</p>
+                <p data-i18n="chem_point3">• <strong>Permanen:</strong> Energi ikatan tinggi (Irreversibel).</p>
+            </div>
+            <canvas id="canvas-chem"></canvas>
+        </div>
+
+        <!-- Panel Kanan: Physisorption -->
+        <div id="panel-right" class="panel">
+            <div class="header-label">
+                <h2 class="text-3xl font-black text-blue-400 drop-shadow-lg" data-i18n="phys_title">PHYSISORPTION</h2>
+                <p class="text-xs text-blue-200 uppercase tracking-widest font-semibold" data-i18n="phys_subtitle">Gaya Van Der Waals (Multilayer)</p>
+            </div>
+            <div class="overlay-info border-blue-500">
+                <p class="mb-1 font-bold text-blue-400" data-i18n="mech_title">Mekanisme:</p>
+                <p data-i18n="phys_point1">• <strong>Universal:</strong> Seluruh permukaan arang.</p>
+                <p data-i18n="phys_point2">• <strong>Multilayer:</strong> Partikel menumpuk berlapis.</p>
+                <p data-i18n="phys_point3">• <strong>Desorpsi:</strong> Ikatan lemah (Reversibel).</p>
+            </div>
+            <div id="desorp-hint" class="click-hint" style="display:none;" data-i18n="hint_desorp">
+                💡 KLIK partikel untuk Desorpsi (Melepas)
+            </div>
+            <canvas id="canvas-phys"></canvas>
+        </div>
+    </div>
+
+    <script>
+        /** ==========================================
+         * SISTEM BILINGUAL (i18n)
+         * ========================================== */
+        const translations = {
+            id: {
+                btn_start: "MULAI SIMULASI",
+                btn_reset: "RESET",
+                chem_title: "CHEMISORPTION",
+                chem_subtitle: "Ikatan Kimia (Monolayer)",
+                mech_title: "Mekanisme:",
+                chem_point1: "• <strong>Spesifik:</strong> Hanya di situs aktif pori.",
+                chem_point2: "• <strong>Monolayer:</strong> Terbatas satu lapis.",
+                chem_point3: "• <strong>Permanen:</strong> Energi ikatan tinggi (Irreversibel).",
+                phys_title: "PHYSISORPTION",
+                phys_subtitle: "Gaya Van Der Waals (Multilayer)",
+                phys_point1: "• <strong>Universal:</strong> Seluruh permukaan arang.",
+                phys_point2: "• <strong>Multilayer:</strong> Partikel menumpuk berlapis.",
+                phys_point3: "• <strong>Desorpsi:</strong> Ikatan lemah (Reversibel).",
+                hint_desorp: "💡 KLIK partikel untuk Desorpsi (Melepas)"
+            },
+            en: {
+                btn_start: "START SIMULATION",
+                btn_reset: "RESET",
+                chem_title: "CHEMISORPTION",
+                chem_subtitle: "Chemical Bond (Monolayer)",
+                mech_title: "Mechanism:",
+                chem_point1: "• <strong>Specific:</strong> Only at active pore sites.",
+                chem_point2: "• <strong>Monolayer:</strong> Limited to one layer.",
+                chem_point3: "• <strong>Permanent:</strong> High binding energy (Irreversible).",
+                phys_title: "PHYSISORPTION",
+                phys_subtitle: "Van Der Waals Forces (Multilayer)",
+                phys_point1: "• <strong>Universal:</strong> Entire charcoal surface.",
+                phys_point2: "• <strong>Multilayer:</strong> Particles stack in layers.",
+                phys_point3: "• <strong>Desorption:</strong> Weak bonds (Reversible).",
+                hint_desorp: "💡 CLICK particles for Desorption (Release)"
+            }
+        };
+
+        function setLanguage(lang) {
+            // Update teks pada elemen berdasarkan data-i18n
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (translations[lang] && translations[lang][key]) {
+                    // Menggunakan innerHTML karena ada tag <strong> di dalam teks
+                    el.innerHTML = translations[lang][key];
+                }
+            });
+
+            // Update class active pada tombol toggle bahasa
+            document.getElementById('btn-id').classList.toggle('active', lang === 'id');
+            document.getElementById('btn-en').classList.toggle('active', lang === 'en');
+        }
+
+        // Inisialisasi bahasa pertama kali
+        setLanguage('id');
+
+        /** ==========================================
+         * LOGIKA SIMULASI
+         * ========================================== */
+        const canvasChem = document.getElementById('canvas-chem');
+        const canvasPhys = document.getElementById('canvas-phys');
+        const ctxChem = canvasChem.getContext('2d');
+        const ctxPhys = canvasPhys.getContext('2d');
+        const startBtn = document.getElementById('startBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const desorpHint = document.getElementById('desorp-hint');
+
+        let particlesChem = [];
+        let particlesPhys = [];
+        let isSimulating = false;
+        let animationFrame;
+
+        const ADSORBATE_COLOR = '#fbbf24'; 
+        const CHEMBOND_COLOR = '#ff1e1e'; 
+        const PHYSBOND_COLOR = '#0ea5e9'; 
+        const PARTICLE_RADIUS = 6;
+        const BOND_LENGTH = 14;
+
+        let surfacePath = [];
+        let sites = [];
+
+        function initCanvas() {
+            const w = window.innerWidth / 2;
+            const h = window.innerHeight;
+            canvasChem.width = canvasPhys.width = w;
+            canvasChem.height = canvasPhys.height = h;
+            generateCharcoal(w, h);
+        }
+
+        function generateCharcoal(w, h) {
+            surfacePath = [];
+            sites = [];
+            const baseline = h * 0.75;
+            const segments = 25;
+            const segW = w / segments;
+
+            surfacePath.push({x: 0, y: h});
+            surfacePath.push({x: 0, y: baseline});
+
+            for (let i = 1; i <= segments; i++) {
+                let x = i * segW;
+                let y = baseline + (Math.random() * 30 - 15);
+
+                if (i % 5 === 0) {
+                    let pw = 45; 
+                    let pd = 100; 
+                    surfacePath.push({x: x - pw, y: baseline});
+                    surfacePath.push({x: x - pw + 5, y: baseline + pd});
+                    
+                    for(let j = 1; j <= 3; j++) {
+                        sites.push({
+                            x: (x - pw) + (pw / 4) * j,
+                            y: baseline + pd - 8,
+                            occupied: false
+                        });
+                    }
+
+                    surfacePath.push({x: x - 5, y: baseline + pd});
+                    surfacePath.push({x: x, y: baseline});
+                } else {
+                    surfacePath.push({x: x, y: y});
+                }
+            }
+            surfacePath.push({x: w, y: baseline});
+            surfacePath.push({x: w, y: h});
+        }
+
+        class Particle {
+            constructor(w, h, type) {
+                this.type = type;
+                this.w = w;
+                this.h = h;
+                this.reset();
+            }
+
+            reset() {
+                this.x = Math.random() * this.w;
+                this.y = -20 - (Math.random() * 800);
+                this.vx = (Math.random() - 0.5) * 2.2;
+                this.vy = 1.8 + Math.random() * 2;
+                this.status = 'floating';
+                this.color = ADSORBATE_COLOR;
+                this.wiggle = 0;
+            }
+
+            update() {
+                if (this.status === 'floating') {
+                    this.vx += (Math.random() - 0.5) * 0.35;
+                    this.x += this.vx;
+                    this.y += this.vy;
+                    if (this.x < 0 || this.x > this.w) this.vx *= -1;
+                    
+                    // Reset if goes too high (during desorption)
+                    if (this.y < -100) this.reset();
+                    
+                    this.checkCollision();
+                } else if (this.status === 'bonded' && this.type === 'phys') {
+                    this.wiggle = Math.sin(Date.now() * 0.02) * 0.7;
+                    
+                    // Auto-desorption chance (kesetimbangan termodinamika)
+                    if (Math.random() < 0.0005) {
+                        this.desorb();
+                    }
+                }
+            }
+
+            desorb() {
+                this.status = 'floating';
+                this.vy = -3 - Math.random() * 3;
+                this.vx = (Math.random() - 0.5) * 4;
+            }
+
+            checkCollision() {
+                if (this.type === 'chem') {
+                    for (let site of sites) {
+                        if (!site.occupied) {
+                            let dx = this.x - site.x;
+                            let dy = this.y - site.y;
+                            let dist = Math.sqrt(dx*dx + dy*dy);
+                            if (dist < 15) {
+                                this.status = 'bonded';
+                                this.x = site.x;
+                                this.y = site.y;
+                                site.occupied = true;
+                                this.color = '#555';
+                                return;
+                            }
+                        }
+                    }
+                    if (isPointInPoly({x: this.x, y: this.y}, surfacePath)) {
+                        this.vy *= -0.5;
+                        this.y -= 5;
+                    }
+                } else {
+                    if (isPointInPoly({x: this.x, y: this.y}, surfacePath)) {
+                        this.status = 'bonded';
+                        return;
+                    }
+                    for (let p of particlesPhys) {
+                        if (p.status === 'bonded') {
+                            let dx = this.x - p.x;
+                            let dy = this.y - p.y;
+                            let dist = Math.sqrt(dx*dx + dy*dy);
+                            if (dist < PARTICLE_RADIUS * 1.85) {
+                                this.status = 'bonded';
+                                let angle = Math.atan2(dy, dx);
+                                this.x = p.x + Math.cos(angle) * (PARTICLE_RADIUS * 1.85);
+                                this.y = p.y + Math.sin(angle) * (PARTICLE_RADIUS * 1.85);
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(this.wiggle, 0);
+                if (this.status === 'bonded') {
+                    ctx.beginPath();
+                    ctx.setLineDash(this.type === 'chem' ? [] : [3, 2]);
+                    ctx.strokeStyle = this.type === 'chem' ? CHEMBOND_COLOR : PHYSBOND_COLOR;
+                    ctx.lineWidth = this.type === 'chem' ? 3 : 1.5;
+                    ctx.moveTo(this.x, this.y);
+                    ctx.lineTo(this.x, this.y + BOND_LENGTH);
+                    ctx.stroke();
+                }
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, PARTICLE_RADIUS, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                if (this.status === 'floating') { 
+                    ctx.shadowBlur = 8; 
+                    ctx.shadowColor = this.color; 
+                }
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+                ctx.stroke();
+                ctx.restore();
+            }
+        }
+
+        function isPointInPoly(pt, poly) {
+            let inside = false;
+            for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+                let xi = poly[i].x, yi = poly[i].y;
+                let xj = poly[j].x, yj = poly[j].y;
+                let intersect = ((yi > pt.y) != (yj > pt.y)) && (pt.x < (xj - xi) * (pt.y - yi) / (yj - yi) + xi);
+                if (intersect) inside = !inside;
+            }
+            return inside;
+        }
+
+        function drawCharcoal(ctx, w, h) {
+            ctx.beginPath();
+            ctx.moveTo(surfacePath[0].x, surfacePath[0].y);
+            for (let p of surfacePath) ctx.lineTo(p.x, p.y);
+            ctx.closePath();
+            let grad = ctx.createLinearGradient(0, h * 0.7, 0, h);
+            grad.addColorStop(0, '#2a2a2a');
+            grad.addColorStop(1, '#000');
+            ctx.fillStyle = grad;
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(0,0,0,0.9)';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            ctx.fillStyle = 'rgba(255,255,255,0.03)';
+            for(let i=0; i<150; i++) ctx.fillRect(Math.random()*w, h*0.7 + Math.random()*h*0.3, 2, 2);
+        }
+
+        function animate() {
+            if (!isSimulating) return;
+            ctxChem.clearRect(0, 0, canvasChem.width, canvasChem.height);
+            ctxPhys.clearRect(0, 0, canvasPhys.width, canvasPhys.height);
+            drawCharcoal(ctxChem, canvasChem.width, canvasChem.height);
+            drawCharcoal(ctxPhys, canvasPhys.width, canvasPhys.height);
+            
+            particlesChem.forEach(p => { p.update(); p.draw(ctxChem); });
+            particlesPhys.forEach(p => { p.update(); p.draw(ctxPhys); });
+            
+            // Spawn partikel terus menerus untuk dinamika
+            if (Math.random() < 0.12 && particlesChem.length < 150) {
+                particlesChem.push(new Particle(canvasChem.width, canvasChem.height, 'chem'));
+                particlesPhys.push(new Particle(canvasPhys.width, canvasPhys.height, 'phys'));
+            }
+            
+            animationFrame = requestAnimationFrame(animate);
+        }
+
+        startBtn.addEventListener('click', () => {
+            if (isSimulating) return;
+            isSimulating = true;
+            for (let i = 0; i < 20; i++) {
+                particlesChem.push(new Particle(canvasChem.width, canvasChem.height, 'chem'));
+                particlesPhys.push(new Particle(canvasPhys.width, canvasPhys.height, 'phys'));
+            }
+            animate();
+            startBtn.style.display = 'none';
+            desorpHint.style.display = 'block';
+        });
+
+        resetBtn.addEventListener('click', () => {
+            isSimulating = false;
+            cancelAnimationFrame(animationFrame);
+            particlesChem = [];
+            particlesPhys = [];
+            sites.forEach(s => s.occupied = false);
+            initCanvas();
+            startBtn.style.display = 'block';
+            desorpHint.style.display = 'none';
+        });
+
+        canvasPhys.addEventListener('mousedown', (e) => {
+            const rect = canvasPhys.getBoundingClientRect();
+            const mx = e.clientX - rect.left;
+            const my = e.clientY - rect.top;
+            
+            // Cek partikel mana yang diklik untuk dilepas
+            let target = null;
+            for (let p of particlesPhys) {
+                if (p.status === 'bonded') {
+                    let dx = mx - p.x;
+                    let dy = my - p.y;
+                    if (Math.sqrt(dx*dx + dy*dy) < 25) { // Radius klik sedikit lebih besar agar mudah
+                        target = p;
+                        break;
+                    }
+                }
+            }
+            
+            if (target) {
+                target.desorb();
+            }
+        });
+
+        window.addEventListener('resize', initCanvas);
+        window.onload = initCanvas;
+    </script>
+</body>
+</html>

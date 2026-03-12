@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulasi Preparasi Sampel Arang Aktif Lengkap</title>
+    <style>
+        /* =========================================
+           1. PANDUAN PENGATURAN GAMBAR & UKURAN
+           ========================================= */
+        :root {
+            /* --- GAMBAR (SEMUA FORMAT DIUBAH KE PNG) --- */
+            --img-parang: url('parang.png');
+            --img-pelepah-daun: url('pelepah_utuh.png');
+            --img-pelepah-lidi: url('pelepah_gundul.png');
+            --img-pisau-kupas: url('pisau_kupas.png');
+            --img-pelepah-kayu: url('pelepah_putih.png');
+            --img-balok: url('potongan_dadu.png');          
+            --img-botol-air: url('botol_aquades.png');
+            --img-matahari: url('ikon_matahari.png');
+            --img-oven: url('oven_lab.png');
+            --img-desikator: url('desikator.png');
+            
+            /* BARU: Gambar Sampel Arang (Hasil Oven) */
+            --img-arang: url('arang_jadi.png'); 
+
+            /* Gambar Pecahan/Limbah */
+            --img-limbah-1: url('potongan_lidi.png');
+            --img-limbah-2: url('kulit_kupas.png');
+
+            /* --- BACKGROUND MEJA LAB --- */
+            --bg-lab-img: none; 
+            --bg-lab-color: #f5f6fa;
+
+            /* --- PENGATURAN UKURAN (Semua diatur ke ~300 sesuai request) --- */
+            
+            /* 1. ALAT & BAHAN UTAMA */
+            --size-parang: 180px;      /* Ukuran Parang */
+            --size-pisau: 180px;       /* Ukuran Pisau */
+            
+            --width-pelepah: 300px;    /* Panjang Pelepah */
+            --height-pelepah: 350px;   /* Tebal Pelepah */
+
+            /* 2. SAMPEL DADU (UMUM) */
+            --width-balok: 300px;      /* Lebar Kumpulan Potongan Dadu */
+            --height-balok: 250px;     /* Tinggi Kumpulan Potongan Dadu */
+            
+            /* 3. SAMPEL KHUSUS OVEN (MASUK vs KELUAR) */
+            --width-balok-oven: 250px; /* Ukuran saat masuk oven */
+            --width-balok-arang: 200px;/* Ukuran saat keluar (jadi arang) */
+
+            /* 4. SAMPEL KHUSUS DESIKATOR */
+            --width-balok-desikator: 150px; /* Ukuran lebar di dalam desikator */
+            --height-balok-desikator: 120px; /* Ukuran tinggi di dalam desikator */
+
+            /* 5. ALAT LAINNYA */
+            --width-botol: 150px;      /* Lebar Botol Aquades */
+            --height-botol: 200px;     /* Tinggi Botol Aquades */
+            --size-oven: 350px;        /* Ukuran Oven */
+            --size-desikator: 350px;   /* Ukuran Desikator */
+            
+            /* 6. PENGATURAN POSISI (DIKELOMPOKKAN AGAR MUDAH) */
+            
+            /* --- Posisi Air (Aquades) --- */
+            --pos-air-top: 140px;      /* Atur ketinggian air */
+            --pos-air-left: 55%;       /* Geser Kiri/Kanan (50% tengah) */
+            --pos-botol-top: 10%;      /* Posisi Botol Vertikal */
+            --pos-botol-right: 40%;    /* Posisi Botol Horizontal */
+
+            /* --- Posisi Matahari & Sinarnya (CENTER / TENGAH) --- */
+            --size-matahari: 150px;    /* Ukuran Matahari */
+            --pos-matahari-top: 20px;  /* Jarak dari Atas Langit-langit */
+            
+            /* Sinar Matahari */
+            --pos-ray-top: 100px;      /* Titik awal sinar (di bawah matahari sedikit) */
+            --height-ray: 500px;       /* Panjang Sinar */
+
+            /* --- Posisi Sampel di Desikator --- */
+            --pos-sample-desikator-top: 50%;  /* Posisi vertikal akhir sampel (65% = agak bawah) */
+            --pos-sample-desikator-left: 50%; /* Posisi horizontal akhir sampel (50% = tengah) */
+
+            /* --- WARNA --- */
+            --primary-color: #2c3e50;
+            --accent-color: #27ae60;
+            --action-color: #d35400;
+        }
+
+        /* =========================================
+           CORE STYLES
+           ========================================= */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #dfe6e9;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        h1 { color: var(--primary-color); margin-bottom: 5px; font-size: 24px; }
+        p.subtitle { color: #7f8c8d; margin-bottom: 20px; margin-top: 0; }
+
+        .simulation-container {
+            width: 800px;
+            height: 500px;
+            background-color: var(--bg-lab-color);
+            background-image: var(--bg-lab-img);
+            background-size: cover;
+            background-position: center;
+            border: 8px solid #bdc3c7;
+            border-radius: 15px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .step-indicator {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(255,255,255,0.9);
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            color: var(--primary-color);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            z-index: 100;
+        }
+
+        .status-badge {
+            position: absolute; bottom: 20px; right: 20px;
+            padding: 8px 15px; background: #333; color: white;
+            border-radius: 5px; font-size: 12px; font-weight: bold;
+            opacity: 0.8;
+            transition: all 0.3s ease;
+        }
+
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        button {
+            padding: 12px 25px;
+            font-size: 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: 0.2s;
+            font-weight: bold;
+            box-shadow: 0 4px 0 rgba(0,0,0,0.1);
+        }
+        button:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0,0,0,0.1); }
+        .btn-prev { background-color: #95a5a6; color: white; }
+        .btn-next { background-color: var(--accent-color); color: white; }
+        .btn-action {
+            background-color: var(--action-color);
+            color: white;
+            font-size: 18px;
+            padding: 15px 40px;
+            border: 2px solid #e67e22;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+        button:disabled { opacity: 0.5; cursor: not-allowed; animation: none; transform: none !important; }
+
+        /* =========================================
+           SCENE STYLES
+           ========================================= */
+        .scene {
+            display: none; width: 100%; height: 100%; position: absolute; top: 0; left: 0;
+        }
+        .scene.active { display: block; animation: fadeIn 0.5s ease-in-out; }
+        
+        .obj {
+            position: absolute; background-repeat: no-repeat; background-size: contain; background-position: center;
+            transition: all 0.5s ease;
+            mix-blend-mode: multiply;
+        }
+
+        /* --- OBJEK SPESIFIK --- */
+        .parang { width: var(--size-parang); height: var(--size-parang); background-image: var(--img-parang); z-index: 10; transform-origin: bottom right; }
+        .pisau { width: var(--size-pisau); height: var(--size-pisau); background-image: var(--img-pisau-kupas); z-index: 10; }
+        .pelepah { width: var(--width-pelepah); height: var(--height-pelepah); background-image: var(--img-pelepah-daun); background-size: cover; border-radius: 10px; }
+        .balok-group { width: var(--width-balok); height: var(--height-balok); background-image: var(--img-balok); transition: filter 1s, transform 1s, width 1s; }
+        
+        .botol { 
+            width: var(--width-botol); 
+            height: var(--height-botol); 
+            background-image: var(--img-botol-air); 
+            transform-origin: top right;
+            top: var(--pos-botol-top);
+            right: var(--pos-botol-right);
+        }
+
+        .air-menetes { 
+            width: 8px; height: 0; 
+            background: #3498db; opacity: 0; 
+            position: absolute;
+            top: var(--pos-air-top); 
+            left: var(--pos-air-left);
+            transform: translateX(-50%);
+            mix-blend-mode: normal;
+        }
+        
+        /* MATAHARI (DI TENGAH) */
+        .matahari { 
+            width: var(--size-matahari); 
+            height: var(--size-matahari); 
+            background-image: var(--img-matahari); 
+            top: var(--pos-matahari-top);
+            left: 50%; /* Selalu di tengah horizontal */
+            transform: translateX(-50%); /* Koreksi agar benar-benar tengah */
+        }
+
+        .oven { width: var(--size-oven); height: var(--size-oven); background-image: var(--img-oven); z-index: 1; }
+        .desikator { width: var(--size-desikator); height: var(--size-desikator); background-image: var(--img-desikator); z-index: 1; }
+
+        .daun-jatuh { width: 150px; height: 60px; background-image: var(--img-limbah-1); background-color: transparent; border-radius: 0; opacity: 0; pointer-events: none; }
+        .kulit-jatuh { width: 150px; height: 40px; background-image: var(--img-limbah-2); background-color: transparent; opacity: 0; pointer-events: none; }
+        
+        .kotoran { position: absolute; width: 5px; height: 5px; background: #5d4037; border-radius: 50%; opacity: 0; }
+        .serpihan { position: absolute; width: 8px; height: 8px; background: #e67e22; border-radius: 2px; opacity: 0; pointer-events: none; }
+
+        .steam { width: 40px; height: 60px; background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 70%); border-radius: 50%; filter: blur(5px); position: absolute; opacity: 0; top: 60%; mix-blend-mode: normal; }
+        
+        /* SINAR MATAHARI (DI TENGAH) */
+        .sun-ray { 
+            width: 8px; 
+            height: var(--height-ray);
+            background: linear-gradient(to bottom, rgba(255, 215, 0, 0.6), rgba(255, 215, 0, 0)); 
+            position: absolute; 
+            top: var(--pos-ray-top);
+            left: 50%; /* Selalu di tengah, mengikuti matahari */
+            transform-origin: top center; /* Titik putar di tengah atas */
+            opacity: 0; pointer-events: none; 
+            mix-blend-mode: normal; 
+        }
+
+        /* UI Oven */
+        .oven-ui { position: absolute; top: 35%; left: 50%; transform: translate(-50%, -50%); background: #333; color: #0f0; padding: 15px; border-radius: 5px; border: 2px solid #555; z-index: 20; display: flex; flex-direction: column; gap: 10px; align-items: center; font-family: 'Courier New', Courier, monospace; mix-blend-mode: normal; }
+        .oven-ui input { width: 60px; text-align: center; background: #000; color: #0f0; border: 1px solid #555; }
+        .timer-display { font-size: 24px; font-weight: bold; letter-spacing: 2px; }
+
+        /* Filter Kondisi */
+        .kotor { filter: sepia(0.8) brightness(0.6) contrast(1.2); }
+        .bersih { filter: none; }
+        .kering { filter: brightness(0.9) sepia(0.2); transform: translate(-50%, -50%) scale(0.9); } 
+        /* Arang tidak perlu filter jika sudah pakai gambar khusus */
+        .arang { filter: none; }
+
+        /* =========================================
+           ANIMATIONS
+           ========================================= */
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes tebas { 0% { transform: rotate(0deg); } 40% { transform: rotate(-60deg) translate(-20px, -20px); } 60% { transform: rotate(20deg) translate(0, 80px); } 100% { transform: rotate(0deg); } }
+        @keyframes cincang { 0% { transform: rotate(0deg); } 25% { transform: rotate(-45deg) translate(-10px, -30px); } 50% { transform: rotate(10deg) translate(0, 30px); } 75% { transform: rotate(-45deg); } 100% { transform: rotate(10deg); translate(0, 30px); } }
+        
+        /* UPDATE: Animasi Jatuh lalu Menghilang (Fade Out) */
+        @keyframes jatuhHilang { 
+            0% { top: 50%; opacity: 1; transform: translate(-50%, -50%) rotate(0); } 
+            60% { top: 90%; opacity: 1; transform: translate(-50%, -50%) rotate(45deg); } /* Jatuh */
+            80% { opacity: 1; } /* Tahan sebentar */
+            100% { top: 95%; opacity: 0; transform: translate(-50%, -50%) rotate(45deg); } /* Hilang */
+        }
+        
+        @keyframes kotoranJatuh { 0% { top: 65%; opacity: 1; } 100% { top: 95%; opacity: 0; } }
+        @keyframes serpihanTerbang { 0% { opacity: 1; transform: translate(0, 0) rotate(0deg); } 100% { opacity: 0; transform: translate(var(--tx), var(--ty)) rotate(720deg); } }
+        @keyframes kupasGerak { 0% { left: 20%; top: 40%; } 100% { left: 70%; top: 40%; } }
+        @keyframes tuang { 0% { transform: rotate(0); } 30% { transform: rotate(-45deg); } 80% { transform: rotate(-45deg); } 100% { transform: rotate(0); } }
+        @keyframes alir { 0% { height: 0; opacity: 1; } 50% { height: 180px; opacity: 1; } 100% { height: 180px; opacity: 0; } }
+        
+        /* Update Animasi Ray: Sekarang menyebar dari tengah */
+        @keyframes rayShine { 
+            0% { opacity: 0.5; transform: translateX(-50%) scaleX(1) rotate(var(--rot)); } 
+            50% { opacity: 0.8; transform: translateX(-50%) scaleX(1.5) rotate(var(--rot)); } 
+            100% { opacity: 0.5; transform: translateX(-50%) scaleX(1) rotate(var(--rot)); } 
+        }
+        
+        @keyframes uapNaik { 0% { top: 65%; opacity: 0; transform: scale(0.5); } 20% { opacity: 0.6; } 100% { top: 30%; opacity: 0; transform: scale(1.5); } }
+        
+        /* Animasi Masuk Desikator dengan Posisi Variabel */
+        @keyframes masukDesikator { 
+            0% { top: 0; left: 50%; opacity: 1; transform: translate(-50%, 0) scale(1); }
+            50% { top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.8); }
+            100% { top: var(--pos-sample-desikator-top); left: var(--pos-sample-desikator-left); opacity: 1; transform: translate(-50%, -50%) scale(0.6); } 
+        }
+
+        @keyframes masukOvenGerak {
+            0% { left: 0%; opacity: 0; transform: translate(-100%, -50%) scale(1); }
+            100% { left: 50%; opacity: 1; transform: translate(-50%, -50%) scale(0.9); }
+        }
+        @keyframes keluarOvenGerak {
+            0% { left: 50%; opacity: 1; transform: translate(-50%, -50%) scale(0.9); }
+            100% { left: 100%; opacity: 0; transform: translate(50%, -50%) scale(1); }
+        }
+
+        .anim-tebas { animation: tebas 0.8s ease-in-out; }
+        .anim-cincang { animation: cincang 1s ease-in-out; }
+        
+        /* Menggunakan animasi baru untuk sampah */
+        .anim-jatuh { animation: jatuhHilang 2s forwards; }
+        
+        .anim-kotoran { animation: kotoranJatuh 1s forwards; }
+        .anim-serpihan { animation: serpihanTerbang 0.8s ease-out forwards; }
+        .anim-kupas { animation: kupasGerak 1.5s linear; }
+        .anim-tuang { animation: tuang 2s ease-in-out; }
+        .anim-alir { animation: alir 2s ease-in-out 0.3s; }
+        .anim-desikator { animation: masukDesikator 2s ease-in-out forwards; }
+        .anim-masuk-oven { animation: masukOvenGerak 1.5s ease-out forwards; }
+        .anim-keluar-oven { animation: keluarOvenGerak 1.5s ease-in forwards; }
+
+        /* --- STYLING TOMBOL BAHASA (TIDAK MENGUBAH LAYOUT UTAMA) --- */
+        .lang-switcher {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+            z-index: 1000;
+        }
+        .lang-btn {
+            padding: 8px 15px;
+            font-size: 14px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .lang-btn:active { transform: translateY(1px); }
+    </style>
+</head>
+<body>
+
+    <!-- TOMBOL BILINGUAL -->
+    <div class="lang-switcher">
+        <button class="lang-btn" id="btn_id" onclick="setLanguage('id')" style="background: var(--primary-color); color: white;">IN</button>
+        <button class="lang-btn" id="btn_en" onclick="setLanguage('en')" style="background: #95a5a6; color: white;">EN</button>
+    </div>
+
+    <h1 id="title_text">Preparasi Sampel Arang Aktif</h1>
+    <p class="subtitle" id="subtitle_text">Simulasi Lengkap: Bahan Baku → Arang Jadi</p>
+
+    <div class="simulation-container">
+        <div class="step-indicator" id="stepText">Langkah 1: Persiapan Bahan</div>
+        <div class="status-badge" id="statusBadge">Status: MENTAH</div>
+
+        <!-- SCENE 1: POTONG DAUN -->
+        <div class="scene active" id="scene-1">
+            <div class="obj pelepah" id="pelepah1" style="top:50%; left:50%; transform:translate(-50%,-50%);" data-label="Pelepah & Daun"></div>
+            <div class="obj daun-jatuh" id="daunLimbah" style="top:50%; left:80%; transform:translate(-50%,-50%); opacity:0;" data-label="Potongan Lidi"></div>
+            <div class="obj parang" id="parang1" style="top:10%; right:20%;"></div>
+        </div>
+
+        <!-- SCENE 2: KUPAS KULIT -->
+        <div class="scene" id="scene-2">
+            <div class="obj pelepah" id="pelepah2" style="background-image:var(--img-pelepah-lidi); top:50%; left:50%; transform:translate(-50%,-50%);" data-label="Pelepah Hijau"></div>
+            <div class="obj kulit-jatuh" id="kulitLimbah" style="top:55%; left:50%; transform:translate(-50%,-50%); opacity:0;" data-label="Limbah Kulit"></div>
+            <div class="obj pisau" id="pisau2" style="top:35%; left:20%;"></div>
+        </div>
+
+        <!-- SCENE 3: POTONG DADU -->
+        <div class="scene" id="scene-3">
+            <div class="obj pelepah" id="pelepah3" style="background-image:var(--img-pelepah-kayu); top:60%; left:50%; transform:translate(-50%,-50%);" data-label="Pelepah Bersih"></div>
+            <div class="obj parang" id="parang3" style="top:20%; right:30%; display:none;"></div>
+            <div class="serpihan" id="s1" style="top:60%; left:50%; --tx: -50px; --ty: -50px;"></div>
+            <div class="serpihan" id="s2" style="top:60%; left:50%; --tx: 50px; --ty: -40px;"></div>
+            <div class="serpihan" id="s3" style="top:60%; left:50%; --tx: -30px; --ty: -80px;"></div>
+            <div class="serpihan" id="s4" style="top:60%; left:50%; --tx: 40px; --ty: -20px;"></div>
+            <div class="obj balok-group" id="balok3" style="top:65%; left:50%; transform:translate(-50%,-50%); opacity:0;" data-label="Potongan Dadu"></div>
+        </div>
+
+        <!-- SCENE 4: CUCI -->
+        <div class="scene" id="scene-4">
+            <div class="obj botol" id="botol4" data-label="Aquades"></div>
+            <div class="obj air-menetes" id="air4"></div>
+            <div class="obj balok-group kotor" id="balok4" style="top:65%; left:50%; transform:translate(-50%,-50%);" data-label="Sampel Kotor"></div>
+            <div class="kotoran" id="k1" style="top:65%; left:48%;"></div>
+            <div class="kotoran" id="k2" style="top:65%; left:50%;"></div>
+            <div class="kotoran" id="k3" style="top:65%; left:52%;"></div>
+            <div id="labelCuci" style="position:absolute; bottom:50px; width:100%; text-align:center; font-weight:bold; color:#e74c3c;">BELUM DICUCI</div>
+        </div>
+
+        <!-- SCENE 5: JEMUR -->
+        <div class="scene" id="scene-5">
+            <div class="obj matahari"></div>
+            <!-- POSISI SINAR SEKARANG MENGIKUTI VARIABEL CSS -->
+            <div class="sun-ray" id="ray1" style="transform:rotate(-10deg);"></div>
+            <div class="sun-ray" id="ray2" style="transform:rotate(0deg); animation-delay: 0.5s;"></div>
+            <div class="sun-ray" id="ray3" style="transform:rotate(10deg); animation-delay: 1s;"></div>
+            
+            <div class="obj balok-group bersih" id="balok5" style="top:70%; left:50%; transform:translate(-50%,-50%);" data-label="Sampel Basah"></div>
+            <div class="steam" id="uap1" style="left:48%;"></div>
+            <div class="steam" id="uap2" style="left:52%; animation-delay: 0.7s;"></div>
+        </div>
+
+        <!-- SCENE 6: OVEN -->
+        <div class="scene" id="scene-6">
+            <div class="obj oven" style="top:50%; left:50%; transform:translate(-50%,-50%);"></div>
+            <div class="oven-ui" id="ovenPanel">
+                <div style="font-size:12px; color:#fff;" id="lbl_suhu">SUHU (°C)</div>
+                <input type="number" id="tempInput" value="500" min="100" max="1500">
+                
+                <div style="font-size:12px; color:#fff; margin-top:5px;" id="lbl_waktu">WAKTU (jam)</div>
+                <input type="number" id="timeInput" value="5" min="3" max="60">
+
+                <div class="timer-display" id="timerDisplay" style="margin-top:10px;">00:05</div>
+                <div style="font-size:10px; color:#aaa;"><span id="lbl_status_text">STATUS: </span><span id="ovenStatus">OFF</span></div>
+            </div>
+            <!-- Sampel akan menggunakan variabel ukuran oven -->
+            <div class="obj balok-group kering" id="balok6" style="top:50%; left:50%; transform:translate(-50%,-50%); z-index:2; display:none; width: var(--width-balok-oven);"></div>
+        </div>
+
+        <!-- SCENE 7: DESIKATOR -->
+        <div class="scene" id="scene-7">
+            <div class="obj desikator" style="top:50%; left:50%; transform:translate(-50%,-50%);"></div>
+            <!-- Menggunakan ukuran khusus Desikator -->
+            <div class="obj balok-group arang" id="balok7" style="top:0%; left:50%; transform:translate(-50%,0); width: var(--width-balok-desikator); height: var(--height-balok-desikator); z-index:2; display:none;"></div>
+            <div id="lbl_pendinginan" style="position:absolute; top:20px; width:100%; text-align:center; color:#555;">PENDINGINAN SAMPEL</div>
+        </div>
+
+    </div>
+
+    <div class="controls">
+        <button class="btn-prev" id="btnPrev" onclick="changeStep(-1)" disabled>Kembali</button>
+        <button class="btn-action" id="btnAction" onclick="triggerAction()">POTONG DAUN</button>
+        <button class="btn-next" id="btnNext" onclick="changeStep(1)">Lanjut</button>
+    </div>
+
+    <script>
+        // ================= DATA TRANSLASI BILINGUAL =================
+        const translations = {
+            id: {
+                title: "Preparasi Sampel Arang Aktif",
+                subtitle: "Simulasi Lengkap: Bahan Baku → Arang Jadi",
+                btnPrev: "Kembali",
+                btnNext: "Lanjut",
+                btnFinish: "Selesai",
+                scene4LabelDirty: "BELUM DICUCI",
+                scene4LabelClean: "SUDAH BERSIH",
+                scene6Temp: "SUHU (°C)",
+                scene6Time: "WAKTU (jam)",
+                scene6StatusText: "STATUS: ",
+                scene7Cooling: "PENDINGINAN SAMPEL",
+                statusLabel: "Status: ",
+                statusClean: "BERSIH",
+                stepData: [
+                    null,
+                    { text: "Langkah 1: Potong Daun (Pisahkan dari Lidi)", action: "POTONG DAUN", status: "MENTAH" },
+                    { text: "Langkah 2: Kupas Kulit Hijau (Ambil Bagian Dalam)", action: "KUPAS KULIT", status: "DIKUPAS" },
+                    { text: "Langkah 3: Potong Dadu (Ukuran Kecil)", action: "CINCANG DADU", status: "DIPOTONG" },
+                    { text: "Langkah 4: Pencucian (Hilangkan Getah & Debu)", action: "CUCI SAMPEL", status: "KOTOR" },
+                    { text: "Langkah 5: Pengeringan Matahari", action: "JEMUR SAMPEL", status: "BASAH" },
+                    { text: "Langkah 6: Karbonisasi Oven", action: "MULAI OVEN", status: "KERING" },
+                    { text: "Langkah 7: Pendinginan di Desikator", action: "SIMPAN DESIKATOR", status: "ARANG PANAS" }
+                ],
+                dynamic: {
+                    drying: "PENGERINGAN...",
+                    dry: "KERING",
+                    saving: "MENYIMPAN...",
+                    saved: "TERSIMPAN",
+                    inserting: "MEMASUKKAN...",
+                    heating: "MEMANASKAN",
+                    carbonizing: "KARBONISASI...",
+                    extracting: "MENGELUARKAN...",
+                    doneAction: "SELESAI",
+                    ready: "SIAP",
+                    off: "OFF",
+                    statusArangDingin: "ARANG DINGIN (SIAP)"
+                }
+            },
+            en: {
+                title: "Active Charcoal Sample Preparation",
+                subtitle: "Complete Simulation: Raw Material → Finished Charcoal",
+                btnPrev: "Previous",
+                btnNext: "Next",
+                btnFinish: "Finish",
+                scene4LabelDirty: "NOT WASHED YET",
+                scene4LabelClean: "ALREADY CLEAN",
+                scene6Temp: "TEMP (°C)",
+                scene6Time: "TIME (hrs)",
+                scene6StatusText: "STATUS: ",
+                scene7Cooling: "SAMPLE COOLING",
+                statusLabel: "Status: ",
+                statusClean: "CLEAN",
+                stepData: [
+                    null,
+                    { text: "Step 1: Cut Leaves (Separate from Stem)", action: "CUT LEAVES", status: "RAW" },
+                    { text: "Step 2: Peel Green Bark (Extract Inner Part)", action: "PEEL BARK", status: "PEELED" },
+                    { text: "Step 3: Dice (Small Size)", action: "DICE CHOP", status: "CUT" },
+                    { text: "Step 4: Washing (Remove Sap & Dust)", action: "WASH SAMPLE", status: "DIRTY" },
+                    { text: "Step 5: Sun Drying", action: "DRY SAMPLE", status: "WET" },
+                    { text: "Step 6: Oven Carbonization", action: "START OVEN", status: "DRY" },
+                    { text: "Step 7: Cooling in Desiccator", action: "STORE IN DESICCATOR", status: "HOT CHARCOAL" }
+                ],
+                dynamic: {
+                    drying: "DRYING...",
+                    dry: "DRY",
+                    saving: "SAVING...",
+                    saved: "SAVED",
+                    inserting: "INSERTING...",
+                    heating: "HEATING",
+                    carbonizing: "CARBONIZING...",
+                    extracting: "EXTRACTING...",
+                    doneAction: "DONE",
+                    ready: "READY",
+                    off: "OFF",
+                    statusArangDingin: "COLD CHARCOAL (READY)"
+                }
+            }
+        };
+
+        // State Simulasi
+        let currentLang = 'id';
+        let currentStep = 1;
+        const totalSteps = 7;
+        let ovenInterval;
+
+        function setLanguage(lang) {
+            currentLang = lang;
+            
+            // Ubah style tombol bahasa
+            document.getElementById('btn_id').style.backgroundColor = lang === 'id' ? 'var(--primary-color)' : '#95a5a6';
+            document.getElementById('btn_en').style.backgroundColor = lang === 'en' ? 'var(--primary-color)' : '#95a5a6';
+
+            // Update Teks Statis
+            const langData = translations[lang];
+            document.getElementById('title_text').innerText = langData.title;
+            document.getElementById('subtitle_text').innerText = langData.subtitle;
+            document.getElementById('lbl_suhu').innerText = langData.scene6Temp;
+            document.getElementById('lbl_waktu').innerText = langData.scene6Time;
+            document.getElementById('lbl_status_text').innerText = langData.scene6StatusText;
+            document.getElementById('lbl_pendinginan').innerText = langData.scene7Cooling;
+
+            // Jangan update action jika sedang berjalan/animasi (agar teks seperti 'PENGERINGAN...' tidak tereset)
+            const btnAction = document.getElementById('btnAction');
+            const isFinished = !document.getElementById('btnNext').disabled;
+            const isAnimating = btnAction.disabled && !isFinished;
+
+            if (!isAnimating) {
+                updateUI();
+            } else {
+                // Hanya update text info dan badge jika sedang animasi
+                document.getElementById('stepText').innerText = langData.stepData[currentStep].text;
+                // Status badge diupdate sebagian jika bukan di step 4 yg lagi dibersihkan
+                const isClean = document.getElementById('balok4').classList.contains('bersih');
+                if (currentStep === 4 && isClean) {
+                    document.getElementById('statusBadge').innerText = langData.statusLabel + langData.statusClean;
+                } else if (currentStep === 7) {
+                    document.getElementById('statusBadge').innerText = langData.statusLabel + langData.dynamic.statusArangDingin;
+                } else {
+                    document.getElementById('statusBadge').innerText = langData.statusLabel + langData.stepData[currentStep].status;
+                }
+            }
+        }
+
+        function updateUI() {
+            const langData = translations[currentLang];
+            const data = langData.stepData[currentStep];
+
+            document.getElementById('stepText').innerText = data.text;
+            
+            if (currentStep !== 4 || document.getElementById('balok4').classList.contains('kotor')) {
+                document.getElementById('statusBadge').innerText = langData.statusLabel + data.status;
+            }
+            
+            const btnAction = document.getElementById('btnAction');
+            
+            // Atur teks tombol utama berdasarkan keadaan
+            if(!document.getElementById('btnNext').disabled) {
+                btnAction.innerText = langData.dynamic.doneAction;
+            } else {
+                btnAction.innerText = data.action;
+                btnAction.disabled = false;
+            }
+            
+            if(currentStep === 4) {
+                const isClean = document.getElementById('balok4').classList.contains('bersih');
+                if(!isClean) {
+                    document.getElementById('labelCuci').innerText = langData.scene4LabelDirty;
+                    document.getElementById('labelCuci').style.color = "#e74c3c";
+                    document.getElementById('balok4').className = "obj balok-group kotor";
+                } else {
+                    document.getElementById('labelCuci').innerText = langData.scene4LabelClean;
+                    document.getElementById('statusBadge').innerText = langData.statusLabel + langData.statusClean;
+                }
+            }
+            if(currentStep === 6) {
+                clearInterval(ovenInterval);
+                const timeSet = document.getElementById('timeInput').value;
+                document.getElementById('timerDisplay').innerText = timeSet < 10 ? `00:0${timeSet}` : `00:${timeSet}`;
+                
+                if (!btnAction.disabled && document.getElementById('btnNext').disabled) {
+                    document.getElementById('ovenStatus').innerText = langData.dynamic.ready;
+                }
+                
+                // Reset state untuk scene 6
+                const sample = document.getElementById('balok6');
+                sample.className = "obj balok-group kering"; 
+                sample.style.backgroundImage = ""; // Reset ke default
+                sample.style.display = "none"; // Sembunyikan dulu sampai tombol ditekan
+                sample.style.width = "var(--width-balok-oven)";
+            }
+            if(currentStep === 7) {
+                const balok7 = document.getElementById('balok7');
+                balok7.style.display = "block";
+                balok7.style.top = "0%"; 
+                balok7.style.opacity = "1";
+                // Pastikan pakai gambar arang
+                balok7.style.backgroundImage = "var(--img-arang)";
+            }
+
+            document.getElementById('btnPrev').disabled = (currentStep === 1);
+            document.getElementById('btnPrev').innerText = langData.btnPrev;
+            document.getElementById('btnNext').innerText = (currentStep === totalSteps) ? langData.btnFinish : langData.btnNext;
+            
+            // Reset disable btnNext jika pindah step
+            if(btnAction.innerText === data.action) {
+                document.getElementById('btnNext').disabled = true; 
+            }
+        }
+
+        function changeStep(dir) {
+            document.getElementById(`scene-${currentStep}`).classList.remove('active');
+            resetScene(currentStep);
+            currentStep += dir;
+            if(currentStep > totalSteps) currentStep = totalSteps;
+            if(currentStep < 1) currentStep = 1;
+            document.getElementById(`scene-${currentStep}`).classList.add('active');
+            
+            // Paksa reset tombol next tiap pindah step
+            document.getElementById('btnNext').disabled = true;
+            updateUI();
+        }
+
+        function triggerAction() {
+            const btn = document.getElementById('btnAction');
+            const langData = translations[currentLang];
+            btn.disabled = true;
+
+            switch(currentStep) {
+                case 1: 
+                    document.getElementById('parang1').classList.add('anim-tebas');
+                    setTimeout(() => {
+                        document.getElementById('daunLimbah').style.opacity = 1;
+                        document.getElementById('daunLimbah').classList.add('anim-jatuh');
+                        document.getElementById('pelepah1').style.backgroundImage = "var(--img-pelepah-lidi)";
+                    }, 400);
+                    setTimeout(finishAction, 1200);
+                    break;
+
+                case 2: 
+                    document.getElementById('pisau2').classList.add('anim-kupas');
+                    document.getElementById('kulitLimbah').style.opacity = 1;
+                    document.getElementById('kulitLimbah').classList.add('anim-jatuh');
+                    setTimeout(() => {
+                        document.getElementById('pelepah2').style.backgroundImage = "var(--img-pelepah-kayu)";
+                    }, 800);
+                    setTimeout(finishAction, 1600);
+                    break;
+
+                case 3: 
+                    const parang3 = document.getElementById('parang3');
+                    parang3.style.display = 'block';
+                    parang3.classList.add('anim-cincang');
+                    
+                    setTimeout(() => {
+                        for(let i=1; i<=4; i++) document.getElementById(`s${i}`).classList.add('anim-serpihan');
+                    }, 250);
+
+                    setTimeout(() => {
+                        document.getElementById('pelepah3').style.opacity = 0;
+                        document.getElementById('balok3').style.opacity = 1;
+                        parang3.style.display = 'none';
+                    }, 1000);
+                    setTimeout(finishAction, 1500);
+                    break;
+
+                case 4: 
+                    document.getElementById('botol4').classList.add('anim-tuang');
+                    document.getElementById('air4').classList.add('anim-alir');
+                    setTimeout(() => {
+                        for(let i=1; i<=3; i++) document.getElementById(`k${i}`).classList.add('anim-kotoran');
+                    }, 500);
+                    setTimeout(() => {
+                        const balok4 = document.getElementById('balok4');
+                        balok4.className = "obj balok-group bersih"; 
+                        const lbl = document.getElementById('labelCuci');
+                        lbl.innerText = langData.scene4LabelClean;
+                        lbl.style.color = "#27ae60";
+                        document.getElementById('statusBadge').innerText = langData.statusLabel + langData.statusClean;
+                        document.getElementById('statusBadge').style.backgroundColor = "#27ae60";
+                    }, 1500);
+                    setTimeout(finishAction, 2500);
+                    break;
+
+                case 5: 
+                    document.getElementById('ray1').style.animation = "rayShine 2s infinite";
+                    document.getElementById('ray2').style.animation = "rayShine 2s infinite 0.5s";
+                    document.getElementById('ray3').style.animation = "rayShine 2s infinite 1s";
+
+                    document.getElementById('uap1').style.animation = "uapNaik 2s infinite";
+                    document.getElementById('uap2').style.animation = "uapNaik 2s infinite 0.7s";
+                    
+                    btn.innerText = langData.dynamic.drying;
+                    setTimeout(() => {
+                        document.getElementById('balok5').className = "obj balok-group kering";
+                    }, 2000);
+                    setTimeout(() => {
+                        finishAction();
+                        btn.innerText = langData.dynamic.dry;
+                    }, 4000);
+                    break;
+
+                case 6: 
+                    startOvenProcess();
+                    break;
+
+                case 7: 
+                    btn.innerText = langData.dynamic.saving;
+                    document.getElementById('balok7').classList.add('anim-desikator');
+                    setTimeout(() => {
+                        document.getElementById('statusBadge').innerText = langData.statusLabel + langData.dynamic.statusArangDingin;
+                        finishAction();
+                        btn.innerText = langData.dynamic.saved;
+                    }, 2000);
+                    break;
+            }
+        }
+
+        function startOvenProcess() {
+            const display = document.getElementById('timerDisplay');
+            const status = document.getElementById('ovenStatus');
+            const btn = document.getElementById('btnAction');
+            const sample = document.getElementById('balok6');
+            const langData = translations[currentLang];
+            
+            // Get user values
+            const temp = document.getElementById('tempInput').value;
+            const timeSet = document.getElementById('timeInput').value;
+
+            // Animasi Masuk Oven
+            sample.style.display = "block";
+            sample.classList.add('anim-masuk-oven');
+            btn.innerText = langData.dynamic.inserting;
+            
+            setTimeout(() => {
+                status.innerText = `${langData.dynamic.heating} (${temp}°C)...`;
+                status.style.color = "#e67e22";
+                btn.innerText = langData.dynamic.carbonizing;
+                
+                let timeLeft = parseInt(timeSet);
+                
+                display.innerText = timeLeft < 10 ? `00:0${timeLeft}` : `00:${timeLeft}`;
+
+                ovenInterval = setInterval(() => {
+                    timeLeft--;
+                    display.innerText = timeLeft < 10 ? `00:0${timeLeft}` : `00:${timeLeft}`;
+                    
+                    if (timeLeft === Math.floor(parseInt(timeSet) * 0.4)) {
+                        sample.className = "obj balok-group arang"; 
+                        // GANTI GAMBAR KE ARANG
+                        sample.style.backgroundImage = "var(--img-arang)";
+                        // Ubah ukuran ke ukuran arang
+                        sample.style.width = "var(--width-balok-arang)";
+                    }
+                    
+                    if(timeLeft <= 0) {
+                        clearInterval(ovenInterval);
+                        status.innerText = langData.dynamic.doneAction;
+                        status.style.color = "#2ecc71";
+                        display.innerText = "00:00";
+                        
+                        // Animasi Keluar Oven
+                        btn.innerText = langData.dynamic.extracting;
+                        sample.classList.remove('anim-masuk-oven');
+                        sample.classList.add('anim-keluar-oven');
+                        
+                        setTimeout(() => {
+                            finishAction();
+                        }, 1500);
+                    }
+                }, 1000);
+            }, 1500); // Tunggu animasi masuk selesai
+        }
+
+        function finishAction() {
+            const btn = document.getElementById('btnAction');
+            btn.innerText = translations[currentLang].dynamic.doneAction;
+            document.getElementById('btnNext').disabled = false;
+        }
+
+        function resetScene(step) {
+            document.querySelectorAll('.anim-tebas, .anim-cincang, .anim-jatuh, .anim-kupas, .anim-tuang, .anim-alir, .anim-kotoran, .anim-desikator, .anim-serpihan, .anim-masuk-oven, .anim-keluar-oven')
+                .forEach(el => el.className = el.className.replace(/anim-[\w-]+/g, '').trim());
+            
+            if(step===1) {
+                document.getElementById('pelepah1').style.backgroundImage = "";
+                document.getElementById('daunLimbah').style.opacity = 0;
+            }
+            if(step===2) {
+                document.getElementById('pelepah2').style.backgroundImage = "var(--img-pelepah-lidi)";
+                document.getElementById('kulitLimbah').style.opacity = 0;
+            }
+            if(step===3) {
+                document.getElementById('pelepah3').style.opacity = 1;
+                document.getElementById('balok3').style.opacity = 0;
+                for(let i=1; i<=4; i++) {
+                    document.getElementById(`s${i}`).classList.remove('anim-serpihan');
+                }
+            }
+            if(step===4) {
+                document.getElementById('k1').style.opacity = 0;
+                document.getElementById('k2').style.opacity = 0;
+                document.getElementById('k3').style.opacity = 0;
+                document.getElementById('statusBadge').style.backgroundColor = "#333";
+            }
+            if(step===5) {
+                document.getElementById('ray1').style.animation = "none";
+                document.getElementById('ray2').style.animation = "none";
+                document.getElementById('ray3').style.animation = "none";
+                document.getElementById('uap1').style.animation = "none";
+                document.getElementById('uap2').style.animation = "none";
+            }
+            if(step===7) {
+                document.getElementById('balok7').style.top = "0%";
+            }
+        }
+
+        window.onload = () => {
+            setLanguage('id'); // Set default ke Bahasa Indonesia saat pertama kali dimuat
+        };
+    </script>
+</body>
+</html>

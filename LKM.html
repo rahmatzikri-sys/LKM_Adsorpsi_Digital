@@ -1,0 +1,1675 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title id="judul_tab">LKM Digital – Kinetika Adsorpsi Arang Pelepah Sawit</title>
+
+<!-- Chart.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+
+<script>
+// ============================================================
+//  KONSTANTA KIMIA TETAP
+// ============================================================
+const CHEM = {
+  C0_M:        0.260,      // M  — konsentrasi awal asam sitrat (dari titrasi t=0)
+  MW_citric:   192.12,     // g/mol — BM asam sitrat
+  m_g:         1.0,        // g   — massa adsorben
+  V_L:         0.025,      // L   — volume larutan adsorpsi (25 mL)
+  C_NaOH:      0.1,        // M   — konsentrasi NaOH
+  V_tit_mL:    2.5,        // mL  — volume efektif aliquot titrasi
+                           // (25 mL aliquot × 10/100 dilution factor)
+};
+// C0 dalam mg/L (auto)
+CHEM.C0_mgL = CHEM.C0_M * CHEM.MW_citric * 1000; // 49951.2 mg/L
+
+// Hitung Ce(M) dari ΔV (mL)
+function calcCe_M(dv_mL) {
+  return (CHEM.C_NaOH * dv_mL) / (3 * CHEM.V_tit_mL);
+}
+// Hitung Ce(mg/L) dari ΔV (mL)
+function calcCe_mgL(dv_mL) {
+  return calcCe_M(dv_mL) * CHEM.MW_citric * 1000;
+}
+// Hitung qe(mg/g)
+function calcQe(Ce_mgL) {
+  return Math.max(0, (CHEM.C0_mgL - Ce_mgL) * CHEM.V_L / CHEM.m_g);
+}
+
+// ============================================================
+//  KAMUS BILINGUAL
+// ============================================================
+const kamusBahasa = {
+  'id': {
+    'judul_tab':          "LKM Digital – Kinetika Adsorpsi Arang Pelepah Sawit",
+    'btn-prev':           "◀ Sebelumnya",
+    'btn-next':           "Selanjutnya ▶",
+    'indicator-page':     "Hal. {n} / 12",
+    'page_titles':        ['Cover','Kata Pengantar','Daftar Isi','Informasi Umum & CPL','Tata Tertib & Panduan','Dasar Teori','Alat & Bahan','Prosedur Kerja','Hasil Pengamatan','Perhitungan & Fitting','Pembahasan','Kesimpulan & Daftar Pustaka'],
+
+    // COVER
+    'judul_lkm':          "Lembar Kerja Mahasiswa (LKM)",
+    'sub_judul':          "Praktikum Adsorpsi Larutan",
+    'desc_judul':         "Pemanfaatan Limbah Pelepah Kelapa Sawit",
+    'judul_identitas':    "Identitas Praktikan",
+    'label_kelompok':     "Kelompok:",
+    'input-kelompok':     "Contoh: Kelompok 3",
+    'label_anggota':      "Nama Anggota & NIM:",
+    'input-anggota':      "1. Nama Lengkap (NIM)\n2. Nama Lengkap (NIM)\n3. Nama Lengkap (NIM)",
+
+    // KATA PENGANTAR
+    'judul_pengantar':    "📖 Kata Pengantar",
+    'teks_pengantar_1':   "Segala puji syukur ke hadirat Tuhan Yang Maha Esa atas rahmat dan karunia-Nya, sehingga Elektronik Lembar Kerja Mahasiswa (e-LKM) berbasis Virtual Lab berjudul <strong>Adsorpsi Larutan Berbasis Biomassa Sawit</strong> ini dapat diselesaikan. LKM digital interaktif ini dirancang untuk memandu praktikum adsorpsi secara kuantitatif, menekan kecemasan laboratorium mahasiswa melalui fitur simulasi mandiri, sekaligus menanamkan prinsip green chemistry.",
+    'teks_pengantar_2':   "Penyusunan e-LKM ini juga menjadi wujud nyata aktualisasi nilai dasar profesi ASN BerAKHLAK. Oleh karena itu, penulis menyampaikan apresiasi dan terima kasih kepada Mentor, pimpinan, serta rekan sejawat di Program Studi Pendidikan Kimia Universitas Sriwijaya atas segala dukungan dan masukan akademiknya.",
+    'label_diperiksa':    "Diperiksa & Disetujui oleh:",
+    'label_dosen':        "Dosen Kimia Fisika",
+
+    // DAFTAR ISI
+    'judul_daftar_isi':   "📋 Daftar Isi",
+    'sub_daftar_isi':     "Klik salah satu bab di bawah ini untuk langsung menuju halaman tersebut.",
+    'toc_2':  "Kata Pengantar",
+    'toc_4':  "Informasi Umum & Capaian Pembelajaran Lulusan (CPL)",
+    'toc_5':  "Tata Tertib & Panduan Penggunaan LKM",
+    'toc_6':  "Dasar Teori (Adsorpsi & Titrasi)",
+    'toc_7':  "Alat & Bahan – Simulasi Pengenalan",
+    'toc_8':  "Prosedur Kerja & Hub Simulasi",
+    'toc_9':  "Hasil Pengamatan (Data Otomatis)",
+    'toc_10': "Perhitungan & Fitting Isoterm Langmuir/Freundlich",
+    'toc_11': "Pembahasan – Soal Analisis Essay",
+    'toc_12': "Kesimpulan & Daftar Pustaka",
+    'tip_daftar_isi': "💡 Tip: Gunakan tombol \"Prev\" / \"Next\" di bawah untuk bernavigasi antar halaman secara berurutan.",
+
+    // INFO UMUM & CPL
+    'pg4_header':         "🎯 Informasi Umum & CPL",
+    'pg4_info_title':     "📌 Informasi Praktikum",
+    'pg4_info_body':      "<strong>Judul:</strong> Adsorpsi Larutan<br><strong>Mata Kuliah:</strong> Kimia Fisika / Praktikum Kimia Fisika<br><strong>SKS:</strong> 1 SKS Praktikum<br><strong>Waktu:</strong> ±170 menit (termasuk simulasi digital)",
+    'pg4_cpl_title':      "📚 Capaian Pembelajaran Lulusan (CPL)",
+    'pg4_th1': "Kode CPL", 'pg4_th2': "Deskripsi Capaian", 'pg4_th3': "Indikator",
+    'pg4_cpl1_code': "CPL-1", 'pg4_cpl1_desc': "Menguasai konsep teoritis adsorpsi dan kinetikanya secara mendalam.", 'pg4_cpl1_ind': "Mampu menjelaskan model Langmuir dan Freundlich dengan benar.",
+    'pg4_cpl2_code': "CPL-2", 'pg4_cpl2_desc': "Mampu menerapkan prinsip kimia fisika dalam analisis data eksperimen.", 'pg4_cpl2_ind': "Dapat menghitung Cₑ dan qₑ serta memfitting ke model isoterm.",
+    'pg4_cpl3_code': "CPL-3", 'pg4_cpl3_desc': "Mampu merancang dan melaksanakan percobaan secara virtual.", 'pg4_cpl3_ind': "Menyelesaikan seluruh tahap simulasi dan merekam data.",
+    'pg4_cpl4_code': "CPL-4", 'pg4_cpl4_desc': "Mampu menganalisis, menginterpretasi, dan mengomunikasikan hasil.", 'pg4_cpl4_ind': "Menjawab soal pembahasan dengan argumentasi berbasis data.",
+    'pg4_subcpmk_title':  "🔬 Sub Capaian Pembelajaran Mata Kuliah (Sub-CPMK)",
+    'pg4_subcpmk_1': "Mahasiswa mampu mendeskripsikan konsep adsorpsi dan perbedaannya dengan absorpsi.",
+    'pg4_subcpmk_2': "Mahasiswa mampu menentukan kapasitas adsorpsi (qₑ) dan konsentrasi akhir (Cₑ) dari data titrasi.",
+    'pg4_subcpmk_3': "Mahasiswa mampu memfitting data ke model isoterm Langmuir dan Freundlich.",
+    'pg4_subcpmk_4': "Mahasiswa mampu menginterpretasikan nilai R² dan memilih model yang lebih sesuai.",
+    'pg4_subcpmk_5': "Mahasiswa mampu menarik kesimpulan yang sahih dari hasil analisis isoterm.",
+
+    // TATA TERTIB
+    'pg5_header':         "📜 Tata Tertib & Panduan Penggunaan",
+    'pg5_rules_title':    "🚦 Tata Tertib Praktikum",
+    'pg5_tt1': "Mahasiswa wajib mengisi identitas (Nama & NIM) pada halaman Cover sebelum memulai LKM.",
+    'pg5_tt2': "Setiap simulasi harus diselesaikan secara berurutan sesuai tahapan prosedur kerja.",
+    'pg5_tt3': "Setelah tiap simulasi, tekan tombol <strong>\"SIMPAN DATA\"</strong> untuk mengirimkan data ke LKM ini.",
+    'pg5_tt4': "Dilarang menutup LKM saat simulasi sedang berjalan di tab lain.",
+    'pg5_tt5': "Jawaban soal essay bersifat mandiri – tidak diperkenankan menyalin dari sumber lain.",
+    'pg5_tt6': "Pastikan perangkat menggunakan browser terbaru (Chrome/Firefox) untuk tampilan optimal.",
+    'pg5_tt7': "LKM hanya bisa dicetak setelah semua halaman terisi. Klik \"Cetak LKM ke PDF\" di halaman 12.",
+    'pg5_tt8': "Simpan file HTML ini di komputer Anda. Jangan hapus localStorage browser selama praktikum.",
+    'pg5_nav_title':      "🖱️ Panduan Navigasi LKM",
+    'pg5_g1_h': "Tombol Prev / Next", 'pg5_g1_p': "Gunakan tombol di bagian bawah layar untuk berpindah halaman maju atau mundur.",
+    'pg5_g2_h': "Daftar Isi (Halaman 3)", 'pg5_g2_p': "Klik nama bab di Daftar Isi untuk langsung melompat ke halaman tujuan.",
+    'pg5_g3_h': "Tombol Simulasi (Halaman 7 & 8)", 'pg5_g3_p': "Klik tombol hijau untuk membuka simulasi di tab baru. Jangan tutup LKM ini.",
+    'pg5_g4_h': "Simpan Data dari Simulasi", 'pg5_g4_p': "Setelah simulasi, tekan \"SIMPAN DATA\". Kembali ke LKM, buka Hal. 9, tekan \"Refresh Data\".",
+    'pg5_g5_h': "Cetak ke PDF", 'pg5_g5_p': "Setelah selesai semua, klik \"Cetak LKM ke PDF\" di halaman 12. Pilih \"Save as PDF\" di dialog cetak.",
+    'pg5_warning': "⚠️ <strong>Perhatian:</strong> LKM ini menyimpan data di <em>localStorage</em> browser Anda. Jangan hapus cache/data browser hingga praktikum selesai dan file PDF telah tersimpan.",
+
+    // DASAR TEORI
+    'pg6_header':         "📗 Dasar Teori & Konsep",
+    'pg6_sim_banner':     "🎓 <strong>Simulasi Konsep:</strong> Silakan buka simulasi di bawah ini untuk memvisualisasikan teori dasar sebelum lanjut ke praktikum.",
+    'pg6_sim1_title': "Anatomi Sawit", 'pg6_sim1_desc': "Bagian-bagian pohon sawit & potensi limbah.",
+    'pg6_sim2_title': "Mekanisme",    'pg6_sim2_desc': "Visualisasi molekuler mekanisme adsorpsi.",
+    'pg6_sim3_title': "Tipe Sorpsi",  'pg6_sim3_desc': "Perbedaan Physisorption vs Chemisorption.",
+    'pg6_sim1_btn': "Buka Simulasi", 'pg6_sim2_btn': "Buka Simulasi", 'pg6_sim3_btn': "Buka Simulasi",
+
+    // ALAT & BAHAN
+    'pg7_header':         "🔬 Alat & Bahan",
+    'pg7_intro':          "Sebelum memulai praktikum, pelajari alat dan bahan yang akan digunakan melalui simulasi interaktif di bawah ini.",
+    'pg7_sim_title':      "Simulasi Pengenalan Alat Laboratorium",
+    'pg7_sim_desc':       "Kenali setiap alat yang digunakan: buret, erlenmeyer, labu ukur, gelas kimia, neraca analitik, dan peralatan karbonisasi.",
+    'pg7_sim_btn':        "🖥️ Buka Simulasi Alat & Bahan",
+    'pg7_alat_title':     "🔧 Daftar Alat",
+    'pg7_bahan_title':    "⚗️ Daftar Bahan",
+    'pg7_warning':        "⚠️ <strong>K3 (Keselamatan):</strong> Gunakan APD (Jas lab, sarung tangan, kacamata) selama praktikum berlangsung. Arang aktif dapat mengiritasi saluran pernapasan; hindari menghirupnya.",
+    'alat_1': "Buret 50 mL (2 buah)", 'alat_2': "Erlenmeyer 250 mL (4 buah)",
+    'alat_3': "Labu ukur 100 mL (4 buah)", 'alat_4': "Gelas kimia 500 mL (2 buah)",
+    'alat_5': "Pipet volume 10 mL", 'alat_6': "Neraca analitik (ketelitian 0,0001 g)",
+    'alat_7': "Magnetic stirrer & hotplate", 'alat_8': "Tanur/furnace (suhu s.d. 700°C)",
+    'alat_9': "Kertas saring Whatman No.42", 'alat_10': "Corong kaca (4 buah)",
+    'alat_11': "Stopwatch", 'alat_12': "Sentrifuge", 'alat_13': "Oven",
+    'alat_14': "Hot Plate", 'alat_15': "Ayakan", 'alat_16': "pH meter",
+    'bahan_1': "Pelepah sawit kering (500 g)", 'bahan_2': "Sari jeruk segar (500 mL)",
+    'bahan_3': "Aquadest (1 L)", 'bahan_4': "Akua DM",
+    'bahan_5': "NaOH 0,1 M (100 mL)", 'bahan_6': "Indikator PP",
+    'bahan_7': "Tissue/lap bersih",
+
+    // PROSEDUR KERJA
+    'pg8_header':         "⚙️ Prosedur Kerja",
+    'pg8_intro':          "Ikuti tahapan simulasi secara berurutan.",
+    'pg8_label1':         "Tahap I: Penyediaan Bahan Baku",
+    'pg8_s1_h': "Pencarian Bahan Baku", 'pg8_s1_btn': "🌿 Buka Sim: Cari Pelepah",
+    'pg8_s2_h': "Preparasi Pelepah",    'pg8_s2_btn': "🔪 Buka Sim: Preparasi",
+    'pg8_label2':         "Tahap II: Sintesis Adsorben",
+    'pg8_s3_h': "Karbonisasi",          'pg8_s3_btn': "🔥 Buka Sim: Karbonisasi",
+    'pg8_label3':         "Tahap III: Preparasi Sampel",
+    'pg8_s4_h': "Pembuatan Larutan Jeruk 10%",  'pg8_s4_btn': "🍊 Buka Sim: Larutan Jeruk",
+    'pg8_s5_h': "Penentuan Konsentrasi Awal (Titrasi NaOH 0,1 M)", 'pg8_s5_btn': "💧 Buka Sim: Titrasi Awal",
+    'pg8_label4':         "Tahap IV: Kinetika Adsorpsi",
+    'pg8_s6_h': "Proses Adsorpsi & Pengambilan Data",
+    'pg8_s6_p': "Mencampurkan arang (1 g) dengan 25 mL larutan jeruk 10%, variasi waktu kontak 15–60 menit, penyaringan, pengambilan 10 mL filtrat, dan titrasi dengan NaOH 0,1 M.",
+    'pg8_s6_btn': "⚗️ Sim 6: Adsorpsi Utama",
+    'pg8_banner': "💡 <strong>PENTING:</strong> Pastikan Anda menekan tombol <strong>\"SIMPAN DATA\"</strong> pada akhir <strong>Simulasi 6 (Adsorpsi Utama)</strong> agar data muncul di tabel pengamatan Halaman 9.",
+
+    // ---- HALAMAN 9: HASIL PENGAMATAN ----
+    // Tabel baru: No | Waktu | ΔV rata-rata | Ce (M) | Status
+    'pg9_header':         "📊 Hasil Pengamatan",
+    'pg9_table_title':    "Tabel Data Titrasi & Konsentrasi Asam Sitrat",
+    'pg9_table_desc':     "Data diisi otomatis dari hasil simulasi. ΔV = volume NaOH rata-rata; Cₑ dihitung dari titrasi.",
+    'pg9_btn_refresh':    "🔄 Refresh Data",
+    'pg9_no_data':        "⚠️ Belum ada data simulasi. Selesaikan simulasi titrasi dan tekan \"SIMPAN DATA\".",
+    'pg9_th0': "No.",
+    'pg9_th1': "Waktu Kontak (menit)",
+    'pg9_th2': "ΔV NaOH rata-rata (mL)",
+    'pg9_th3': "Konsentrasi Asam Sitrat, Cₑ (M)",
+    'pg9_th4': "Status",
+    'pg9_status_done': "✅ Terisi", 'pg9_status_pend': "⏳ Belum",
+    'pg9_info_title':     "📝 Keterangan Perhitungan Cₑ",
+    'pg9_info_body':      "<strong>Titrasi:</strong> 10 mL filtrat + indikator PP, dititrasi dengan NaOH 0,1 M hingga merah muda.<br><strong>Reaksi:</strong> H₃C₆H₅O₇ + 3 NaOH → Na₃C₆H₅O₇ + 3 H₂O (asam sitrat triprotik).<br><strong>Formula Cₑ:</strong> Cₑ (M) = (0,1 × ΔV) / (3 × 2,5) &nbsp;|&nbsp; <strong>Konversi:</strong> Cₑ (mg/L) = Cₑ (M) × 192.120<br><em>Keterangan: volume efektif titrasi = 2,5 mL setelah faktor pengenceran.</em>",
+    'pg9_manual_title':   "Input Manual (Opsional)",
+    'pg9_manual_desc':    "Jika simulasi tidak tersedia, Anda dapat mengisi ΔV secara manual:",
+    'pg9_manual_th0': "Waktu (mnt)", 'pg9_manual_th1': "ΔV NaOH (mL)", 'pg9_manual_th2': "Cₑ (M) – auto", 'pg9_manual_th3': "Aksi",
+    'pg9_btn_reset':      "+ Reset Baris Input Manual",
+    'pg9_btn_save_row':   "Simpan",
+    'pg9_data_ok':        "✅ Semua data ({n}/4) berhasil dimuat dari simulasi.",
+    'pg9_data_partial':   "⚠️ Data terbaca {n}/4. Selesaikan simulasi yang tersisa.",
+
+    // ---- HALAMAN 10: PERHITUNGAN ----
+    // Parameter tetap (tidak perlu diinput lagi)
+    'pg10_header':        "🧮 Perhitungan & Fitting Isoterm",
+    'pg10_param_title':   "A. Parameter Percobaan (Tetap)",
+    'pg10_param_note':    "Parameter di bawah ini sudah ditetapkan sesuai desain percobaan. Tidak perlu diubah.",
+    'pg10_data_title':    "B. Data Cₑ dan qₑ (dari Tabel Pengamatan)",
+    'pg10_data_desc':     "Klik <strong>\"Hitung Otomatis\"</strong> untuk mengisi Cₑ dan qₑ dari data simulasi. Atau isi ΔV manual dan klik \"Hitung\" per baris.",
+    'pg10_th_time': "Waktu (mnt)", 'pg10_th_dv': "ΔV (mL)", 'pg10_th_ce': "Cₑ (mg/L)", 'pg10_th_qe': "qₑ (mg/g)", 'pg10_th_act': "Aksi",
+    'pg10_btn_calc_row':  "Hitung",
+    'pg10_btn_auto':      "⚡ Hitung Otomatis dari Simulasi",
+    'pg10_btn_chart':     "📈 Buat Grafik Isoterm",
+    'pg10_chart_title':   "C. Grafik Fitting Isoterm",
+    'pg10_langmuir_title': "📉 Isoterm Langmuir",
+    'pg10_langmuir_axis':  "Sumbu X: Cₑ (mg/L) &nbsp;|&nbsp; Sumbu Y: Cₑ/qₑ",
+    'pg10_freundlich_title': "📈 Isoterm Freundlich",
+    'pg10_freundlich_axis':  "Sumbu X: log Cₑ &nbsp;|&nbsp; Sumbu Y: log qₑ",
+    'pg10_chart_pending': "Grafik akan muncul setelah data dimasukkan.",
+    'pg10_alert_no_data': "Belum ada data dari simulasi. Selesaikan titrasi terlebih dahulu.",
+    'pg10_alert_done':    "✅ Kalkulasi otomatis selesai! Periksa nilai Cₑ dan qₑ, lalu klik \"Buat Grafik Isoterm\".",
+    'pg10_alert_min':     "Minimal 2 data titik yang valid diperlukan untuk grafik.",
+    'pg10_alert_dv':      "Isi ΔV terlebih dahulu.",
+    'pg10_lang_eq': "Persamaan", 'pg10_lang_qm': "qₘ", 'pg10_lang_kl': "KL",
+    'pg10_frnd_eq': "Persamaan", 'pg10_frnd_kf': "Kf",
+
+    // PEMBAHASAN
+    'pg11_header':        "✍️ Pembahasan",
+    'pg11_info_title':    "📌 Petunjuk Pengerjaan",
+    'pg11_info_body':     "Jawab setiap pertanyaan di bawah ini berdasarkan hasil grafik dan perhitungan Anda. Batas maksimal: <strong>200 kata per soal</strong>.",
+    'pg11_q1_num': "Soal 1.", 'pg11_q1_text': "Berdasarkan nilai R² yang diperoleh dari grafik Langmuir dan Freundlich, model isoterm manakah yang lebih sesuai mendeskripsikan adsorpsi larutan jeruk oleh arang pelepah sawit? Jelaskan alasannya secara kimia!",
+    'pg11_q1_ph': "Tulis jawaban Anda di sini...",
+    'pg11_q2_num': "Soal 2.", 'pg11_q2_text': "Berdasarkan data kinetika (variasi waktu kontak 15–60 menit), analisislah bagaimana hubungan waktu kontak terhadap kapasitas adsorpsi (qₑ). Apakah terdapat kesetimbangan adsorpsi? Pada menit berapakah kesetimbangan tercapai?",
+    'pg11_q2_ph': "Tulis jawaban Anda di sini...",
+    'pg11_q3_num': "Soal 3.", 'pg11_q3_text': "Jelaskan faktor-faktor yang memengaruhi efisiensi adsorpsi arang pelepah sawit terhadap larutan jeruk dalam sari jeruk. Faktor apa yang menurut Anda paling signifikan berdasarkan hasil yang Anda peroleh?",
+    'pg11_q3_ph': "Tulis jawaban Anda di sini...",
+    'essay-1': "Tulis jawaban Anda di sini...",
+    'essay-2': "Tulis jawaban Anda di sini...",
+    'essay-3': "Tulis jawaban Anda di sini...",
+    'pg11_wc_fmt': "{n} / 200 kata", 'pg11_wc_max': "200 / 200 kata (batas tercapai)",
+    'pg11_btn_save': "💾 Simpan Jawaban Essay",
+    'pg11_alert_saved': "✅ Jawaban essay berhasil disimpan!",
+
+    // PARAM FIXED LABELS (hal. 10)
+    'param_lbl_c0':   "Konsentrasi Awal, C₀",
+    'param_sub_c0':   "= 0,260 M × 192.120 mg/mol &nbsp;|&nbsp; sari jeruk 10%, ΔV₀ = 19,50 mL",
+    'param_lbl_m':    "Massa Adsorben, m",
+    'param_sub_m':    "Arang pelepah sawit per wadah adsorpsi",
+    'param_lbl_v':    "Volume Larutan Adsorpsi, V",
+    'param_sub_v':    "Aliquot dari larutan jeruk 10% (10 mL jeruk + 90 mL air)",
+    'param_lbl_n':    "Konsentrasi NaOH Titran",
+    'param_sub_n':    "Volume titrasi ideal ~0,75–19,50 mL → pembacaan akurat",
+
+    // PROCEDURE TEXT (hal. 8)
+    'pg8_proc1': "Sampel OPF dipotong ±2 cm, dicuci dengan akuades, dikeringkan di bawah sinar matahari, kemudian dioven pada 105°C selama 2 jam.",
+    'pg8_proc2': "Sampel dikarbonisasi di furnace pada suhu 600°C selama 60 menit, digerus, diayak (80 dan 120 mesh), dan disimpan dalam desikator. <em>(Zikri et al., 2022)</em>",
+    'pg8_proc2b': "Sampel OPF yang telah dipreparasi dikarbonisasi di dalam furnace pada temperatur 600°C selama 60 menit. COPF yang diperoleh kemudian digerus hingga halus, diayak menggunakan ayakan 80 dan 120 mesh untuk ukuran homogen, lalu ditempatkan dalam desikator. <em>(Zikri et al., 2022)</em>",
+    'pg8_proc3': "Jeruk dikupas dan diperas lalu disaring. Larutan jeruk 10% disiapkan: 10 mL sari jeruk dimasukkan ke gelas ukur, ditambah akuades hingga 100 mL, diaduk homogen (v/v).",
+    'pg8_proc4': "Ambil 25 mL larutan jeruk 10%. Teteskan indikator PP, lalu titrasi dengan NaOH 0,1 M hingga terbentuk warna merah muda permanen. Catat volume NaOH sebagai data konsentrasi awal (C₀).",
+    'pg8_proc5': "Campurkan 25 mL larutan jeruk 10% + 1 gram adsorben ke dalam erlenmeyer. Aduk dengan hotplate stirrer pada 120 rpm selama 15, 30, 45, dan 60 menit. Sentrifuse 6000 rpm/15 menit (25°C). Ambil 10 mL cairan supernatan, titrasi kembali dengan NaOH 0,1 M untuk menentukan konsentrasi akhir (Cₑ).",
+
+    // FORMULA BOX TITLES
+    'pg9_formula_title': "📐 Rumus Perhitungan Cₑ:",
+    'pg9_formula_note':  "Asam sitrat bersifat triprotik (H₃C₆H₅O₇ + 3NaOH → produk + 3H₂O) | BM = 192,12 g/mol | V<sub>titrasi efektif</sub> = 2,5 mL",
+    'pg10_formula_title': "📐 Rumus Kunci:",
+
+    // KESIMPULAN
+    'pg12_header':        "🏁 Kesimpulan & Daftar Pustaka",
+    'pg12_concl_title':   "✅ Kesimpulan",
+    'pg12_concl_ph':      "Tuliskan kesimpulan dari praktikum ini berdasarkan hasil pengamatan, perhitungan, dan pembahasan yang telah Anda lakukan...",
+    'pg12_ref_title':     "📚 Daftar Pustaka",
+    'pg12_btn_print':     "🖨️ Cetak LKM ke PDF",
+    'pg12_btn_drive':     "Buka Folder Google Drive",
+    'pg12_print_note':    "1. Klik <b>Cetak ke PDF</b> dan simpan file di perangkat Anda.<br>2. Klik <b>Buka Folder Google Drive</b> untuk mengunggah file PDF tersebut.",
+    'pg12_id_title':      "👤 Identitas Mahasiswa",
+    'pg12_id_empty':      "Belum diisi. Kembali ke halaman Cover untuk mengisi identitas.",
+    'pg12_alert_no_id':   "⚠️ Identitas (Nama & NIM) belum diisi. Kembali ke halaman Cover untuk mengisi.",
+
+    // MISC
+    'wc-1': "0 / 200 kata", 'wc-2': "0 / 200 kata", 'wc-3': "0 / 200 kata",
+    'wc_unit': "kata",
+    'id_label_kelompok': "Kelompok", 'id_label_anggota': "Anggota",
+    'langmuir-reg': "Grafik akan muncul setelah data dimasukkan.",
+    'freundlich-reg': "Grafik akan muncul setelah data dimasukkan.",
+    'concl-text': "Tuliskan kesimpulan dari praktikum ini...",
+  },
+
+  'en': {
+    'judul_tab':          "Digital E-Worksheet – Adsorption Kinetics of Palm Frond Charcoal",
+    'btn-prev':           "◀ Previous",
+    'btn-next':           "Next ▶",
+    'indicator-page':     "Page {n} / 12",
+    'page_titles':        ['Cover','Preface','Table of Contents','General Info & CPL','Rules & Guidelines','Theoretical Background','Tools & Materials','Work Procedure','Observation Results','Calculation & Fitting','Discussion','Conclusion & References'],
+
+    'judul_lkm':          "Student Worksheet (LKM)",
+    'sub_judul':          "Solution Adsorption Practicum",
+    'desc_judul':         "Utilization of Palm Frond Waste",
+    'judul_identitas':    "Student Identity",
+    'label_kelompok':     "Group:",
+    'input-kelompok':     "Example: Group 3",
+    'label_anggota':      "Group Members & Student IDs:",
+    'input-anggota':      "1. Full Name (Student ID)\n2. Full Name (Student ID)\n3. Full Name (Student ID)",
+
+    'judul_pengantar':    "📖 Preface",
+    'teks_pengantar_1':   "All praise and gratitude to God Almighty for His grace and blessings, so that this Virtual Lab-based Electronic Student Worksheet (e-LKM) entitled <strong>Solution Adsorption Based on Palm Biomass</strong> has been completed.",
+    'teks_pengantar_2':   "The preparation of this e-LKM is also a concrete manifestation of the actualization of the core values of the BerAKHLAK ASN profession. The author expresses appreciation and gratitude to the Mentor, leadership, and colleagues in the Chemistry Education Study Program at Sriwijaya University.",
+    'label_diperiksa':    "Checked & Approved by:",
+    'label_dosen':        "Physical Chemistry Lecturer",
+
+    'judul_daftar_isi':   "📋 Table of Contents",
+    'sub_daftar_isi':     "Click on any chapter below to go directly to that page.",
+    'toc_2': "Preface", 'toc_4': "General Information & CPL", 'toc_5': "Rules & LKM Usage Guide",
+    'toc_6': "Theoretical Background", 'toc_7': "Tools & Materials", 'toc_8': "Work Procedure",
+    'toc_9': "Observation Results", 'toc_10': "Calculation & Isotherm Fitting",
+    'toc_11': "Discussion", 'toc_12': "Conclusion & References",
+    'tip_daftar_isi': "💡 Tip: Use the \"Prev\" / \"Next\" buttons below to navigate sequentially.",
+
+    'pg4_header': "🎯 General Information & CPL",
+    'pg4_info_title': "📌 Practicum Information",
+    'pg4_info_body': "<strong>Title:</strong> Solution Adsorption<br><strong>Course:</strong> Physical Chemistry Lab<br><strong>Credits:</strong> 1 SKS<br><strong>Duration:</strong> ±170 minutes",
+    'pg4_cpl_title': "📚 Graduate Learning Outcomes (CPL)",
+    'pg4_th1': "CPL Code", 'pg4_th2': "Description", 'pg4_th3': "Indicator",
+    'pg4_cpl1_code': "CPL-1", 'pg4_cpl1_desc': "Master adsorption theory and kinetics.", 'pg4_cpl1_ind': "Explain Langmuir and Freundlich models correctly.",
+    'pg4_cpl2_code': "CPL-2", 'pg4_cpl2_desc': "Apply physical chemistry in data analysis.", 'pg4_cpl2_ind': "Calculate Cₑ and qₑ and fit isotherm models.",
+    'pg4_cpl3_code': "CPL-3", 'pg4_cpl3_desc': "Design and conduct virtual experiments.", 'pg4_cpl3_ind': "Complete all simulation stages.",
+    'pg4_cpl4_code': "CPL-4", 'pg4_cpl4_desc': "Analyze, interpret, and communicate results.", 'pg4_cpl4_ind': "Answer discussion with data-based arguments.",
+    'pg4_subcpmk_title': "🔬 Sub-CPMK",
+    'pg4_subcpmk_1': "Describe adsorption concept vs absorption.",
+    'pg4_subcpmk_2': "Determine qₑ and Cₑ from titration data.",
+    'pg4_subcpmk_3': "Fit data to Langmuir and Freundlich models.",
+    'pg4_subcpmk_4': "Interpret R² and select the better model.",
+    'pg4_subcpmk_5': "Draw valid conclusions from isotherm analysis.",
+
+    'pg5_header': "📜 Rules & Usage Guidelines",
+    'pg5_rules_title': "🚦 Practicum Rules",
+    'pg5_tt1': "Fill in identity on the Cover page before starting.",
+    'pg5_tt2': "Complete each simulation in order.",
+    'pg5_tt3': "Press <strong>\"SAVE DATA\"</strong> after each simulation.",
+    'pg5_tt4': "Do not close the worksheet while simulation is running.",
+    'pg5_tt5': "Essay answers must be independent.",
+    'pg5_tt6': "Use an up-to-date browser (Chrome/Firefox).",
+    'pg5_tt7': "Print only after all pages are filled.",
+    'pg5_tt8': "Do not clear browser localStorage during the practicum.",
+    'pg5_nav_title': "🖱️ Navigation Guide",
+    'pg5_g1_h': "Prev / Next Buttons", 'pg5_g1_p': "Navigate forward or backward.",
+    'pg5_g2_h': "Table of Contents (Page 3)", 'pg5_g2_p': "Click a chapter to jump to that page.",
+    'pg5_g3_h': "Simulation Buttons (Pages 7 & 8)", 'pg5_g3_p': "Open simulation in a new tab.",
+    'pg5_g4_h': "Save Data from Simulation", 'pg5_g4_p': "Press \"SAVE DATA\", then refresh Page 9.",
+    'pg5_g5_h': "Print to PDF", 'pg5_g5_p': "Click \"Print to PDF\" on page 12.",
+    'pg5_warning': "⚠️ <strong>Warning:</strong> Data is stored in browser localStorage. Do not clear cache until the PDF is saved.",
+
+    'pg6_header': "📗 Theoretical Background",
+    'pg6_sim_banner': "🎓 <strong>Concept Simulation:</strong> Open simulations below before proceeding.",
+    'pg6_sim1_title': "Palm Anatomy", 'pg6_sim1_desc': "Parts of oil palm & waste potential.",
+    'pg6_sim2_title': "Mechanism",    'pg6_sim2_desc': "Molecular visualization of adsorption.",
+    'pg6_sim3_title': "Sorption Types", 'pg6_sim3_desc': "Physisorption vs Chemisorption.",
+    'pg6_sim1_btn': "Open Simulation", 'pg6_sim2_btn': "Open Simulation", 'pg6_sim3_btn': "Open Simulation",
+
+    'pg7_header': "🔬 Tools & Materials",
+    'pg7_intro': "Study tools and materials through the interactive simulation below.",
+    'pg7_sim_title': "Laboratory Equipment Introduction",
+    'pg7_sim_desc': "Burette, Erlenmeyer, volumetric flask, beaker, analytical balance, carbonization equipment.",
+    'pg7_sim_btn': "🖥️ Open Tools & Materials Simulation",
+    'pg7_alat_title': "🔧 Equipment List", 'pg7_bahan_title': "⚗️ Materials List",
+    'pg7_warning': "⚠️ <strong>Safety:</strong> Wear PPE throughout. Activated charcoal can irritate the respiratory tract.",
+    'alat_1': "Burette 50 mL (2 pcs)", 'alat_2': "Erlenmeyer 250 mL (4 pcs)",
+    'alat_3': "Volumetric flask 100 mL (4 pcs)", 'alat_4': "Beaker 500 mL (2 pcs)",
+    'alat_5': "Volumetric pipette 10 mL", 'alat_6': "Analytical balance (0.0001 g)",
+    'alat_7': "Magnetic stirrer & hotplate", 'alat_8': "Furnace (up to 700°C)",
+    'alat_9': "Whatman No.42 filter paper", 'alat_10': "Glass funnel (4 pcs)",
+    'alat_11': "Stopwatch", 'alat_12': "Centrifuge", 'alat_13': "Oven",
+    'alat_14': "Hot Plate", 'alat_15': "Sieve", 'alat_16': "pH meter",
+    'bahan_1': "Dried oil palm frond (500 g)", 'bahan_2': "Fresh orange juice (500 mL)",
+    'bahan_3': "Distilled water (1 L)", 'bahan_4': "Demineralized water",
+    'bahan_5': "NaOH 0.1 M (100 mL)", 'bahan_6': "Phenolphthalein indicator",
+    'bahan_7': "Tissue / clean cloth",
+
+    'pg8_header': "⚙️ Work Procedure",
+    'pg8_intro': "Follow the simulation stages in order.",
+    'pg8_label1': "Stage I: Raw Material Preparation",
+    'pg8_s1_h': "Raw Material Search", 'pg8_s1_btn': "🌿 Open Sim: Find Frond",
+    'pg8_s2_h': "Frond Preparation",   'pg8_s2_btn': "🔪 Open Sim: Preparation",
+    'pg8_label2': "Stage II: Adsorbent Synthesis",
+    'pg8_s3_h': "Carbonization",       'pg8_s3_btn': "🔥 Open Sim: Carbonization",
+    'pg8_label3': "Stage III: Sample Preparation",
+    'pg8_s4_h': "Preparation of 10% Orange Solution", 'pg8_s4_btn': "🍊 Open Sim: Orange Solution",
+    'pg8_s5_h': "Initial Concentration (NaOH 0.1 M Titration)", 'pg8_s5_btn': "💧 Open Sim: Initial Titration",
+    'pg8_label4': "Stage IV: Adsorption Kinetics",
+    'pg8_s6_h': "Adsorption Process & Data Collection",
+    'pg8_s6_p': "Mix charcoal (1 g) with 25 mL of 10% OJ, vary contact time 15–60 min, filter, titrate 10 mL filtrate with NaOH 0.1 M.",
+    'pg8_s6_btn': "⚗️ Sim 6: Main Adsorption",
+    'pg8_banner': "💡 <strong>IMPORTANT:</strong> Press <strong>\"SAVE DATA\"</strong> at the end of Simulation 6.",
+
+    // PAGE 9 — EN
+    'pg9_header':         "📊 Observation Results",
+    'pg9_table_title':    "Titration Data & Citric Acid Concentration",
+    'pg9_table_desc':     "Auto-filled from simulation. ΔV = average NaOH volume; Cₑ calculated from titration.",
+    'pg9_btn_refresh':    "🔄 Refresh Data",
+    'pg9_no_data':        "⚠️ No simulation data yet. Complete titration simulation and press \"SAVE DATA\".",
+    'pg9_th0': "No.",
+    'pg9_th1': "Contact Time (min)",
+    'pg9_th2': "Average ΔV NaOH (mL)",
+    'pg9_th3': "Citric Acid Concentration, Cₑ (M)",
+    'pg9_th4': "Status",
+    'pg9_status_done': "✅ Filled", 'pg9_status_pend': "⏳ Pending",
+    'pg9_info_title':     "📝 Cₑ Calculation Notes",
+    'pg9_info_body':      "<strong>Titration:</strong> 10 mL filtrate + PP indicator, titrated with NaOH 0.1 M.<br><strong>Reaction:</strong> H₃C₆H₅O₇ + 3 NaOH → Na₃C₆H₅O₇ + 3 H₂O (triprotic).<br><strong>Formula:</strong> Cₑ (M) = (0.1 × ΔV) / (3 × 2.5) &nbsp;|&nbsp; <strong>Convert:</strong> Cₑ (mg/L) = Cₑ (M) × 192,120",
+    'pg9_manual_title':   "Manual Input (Optional)",
+    'pg9_manual_desc':    "If simulation unavailable, enter ΔV manually:",
+    'pg9_manual_th0': "Time (min)", 'pg9_manual_th1': "ΔV NaOH (mL)", 'pg9_manual_th2': "Cₑ (M) – auto", 'pg9_manual_th3': "Action",
+    'pg9_btn_reset':      "+ Reset Manual Input Rows",
+    'pg9_btn_save_row':   "Save",
+    'pg9_data_ok':        "✅ All data ({n}/4) loaded from simulation.",
+    'pg9_data_partial':   "⚠️ {n}/4 data loaded. Complete remaining simulations.",
+
+    // PAGE 10 — EN
+    'pg10_header':        "🧮 Calculation & Isotherm Fitting",
+    'pg10_param_title':   "A. Experimental Parameters (Fixed)",
+    'pg10_param_note':    "Parameters below are fixed by experimental design. No changes needed.",
+    'pg10_data_title':    "B. Cₑ and qₑ Data",
+    'pg10_data_desc':     "Click <strong>\"Auto Calculate\"</strong> to fill from simulation data, or enter ΔV manually.",
+    'pg10_th_time': "Time (min)", 'pg10_th_dv': "ΔV (mL)", 'pg10_th_ce': "Cₑ (mg/L)", 'pg10_th_qe': "qₑ (mg/g)", 'pg10_th_act': "Action",
+    'pg10_btn_calc_row':  "Calculate",
+    'pg10_btn_auto':      "⚡ Auto Calculate from Simulation",
+    'pg10_btn_chart':     "📈 Generate Isotherm Graphs",
+    'pg10_chart_title':   "C. Isotherm Fitting Graphs",
+    'pg10_langmuir_title': "📉 Langmuir Isotherm",
+    'pg10_langmuir_axis':  "X-Axis: Cₑ (mg/L) &nbsp;|&nbsp; Y-Axis: Cₑ/qₑ",
+    'pg10_freundlich_title': "📈 Freundlich Isotherm",
+    'pg10_freundlich_axis':  "X-Axis: log Cₑ &nbsp;|&nbsp; Y-Axis: log qₑ",
+    'pg10_chart_pending': "Graph will appear after data is entered.",
+    'pg10_alert_no_data': "No simulation data. Please complete titration first.",
+    'pg10_alert_done':    "✅ Auto calculation complete! Check Cₑ and qₑ, then click \"Generate Isotherm Graphs\".",
+    'pg10_alert_min':     "At least 2 valid data points required.",
+    'pg10_alert_dv':      "Please enter ΔV first.",
+    'pg10_lang_eq': "Equation", 'pg10_lang_qm': "qₘ", 'pg10_lang_kl': "KL",
+    'pg10_frnd_eq': "Equation", 'pg10_frnd_kf': "Kf",
+
+    'pg11_header': "✍️ Discussion",
+    'pg11_info_title': "📌 Instructions",
+    'pg11_info_body': "Answer each question based on your graphs and calculations. Max: <strong>200 words per question</strong>.",
+    'pg11_q1_num': "Question 1.", 'pg11_q1_text': "Based on R² from Langmuir and Freundlich graphs, which model better describes adsorption? Explain chemically!",
+    'pg11_q1_ph': "Write your answer here...",
+    'pg11_q2_num': "Question 2.", 'pg11_q2_text': "Analyze the relationship between contact time and qₑ. Is there adsorption equilibrium? At what minute?",
+    'pg11_q2_ph': "Write your answer here...",
+    'pg11_q3_num': "Question 3.", 'pg11_q3_text': "Explain factors affecting adsorption efficiency. Which is most significant based on your results?",
+    'pg11_q3_ph': "Write your answer here...",
+    'essay-1': "Write your answer here...",
+    'essay-2': "Write your answer here...",
+    'essay-3': "Write your answer here...",
+    'pg11_wc_fmt': "{n} / 200 words", 'pg11_wc_max': "200 / 200 words (limit reached)",
+    'pg11_btn_save': "💾 Save Essay Answers",
+    'pg11_alert_saved': "✅ Essay answers saved!",
+
+    // PARAM FIXED LABELS (page 10)
+    'param_lbl_c0':   "Initial Concentration, C₀",
+    'param_sub_c0':   "= 0.260 M × 192,120 mg/mol &nbsp;|&nbsp; 10% orange juice, ΔV₀ = 19.50 mL",
+    'param_lbl_m':    "Adsorbent Mass, m",
+    'param_sub_m':    "Palm frond charcoal per adsorption vessel",
+    'param_lbl_v':    "Adsorption Solution Volume, V",
+    'param_sub_v':    "Aliquot of 10% orange solution (10 mL juice + 90 mL water)",
+    'param_lbl_n':    "NaOH Titrant Concentration",
+    'param_sub_n':    "Ideal titration volume ~0.75–19.50 mL → accurate burette reading",
+
+    // PROCEDURE TEXT (page 8)
+    'pg8_proc1': "OPF samples are cut into ±2 cm pieces, washed with distilled water, sun-dried, then oven-dried at 105°C for 2 hours.",
+    'pg8_proc2': "Samples are carbonized in a furnace at 600°C for 60 minutes, ground, sieved (80 and 120 mesh), and stored in a desiccator. <em>(Zikri et al., 2022)</em>",
+    'pg8_proc2b': "Prepared OPF samples are carbonized in a furnace at 600°C for 60 minutes. The resulting charcoal (COPF) is ground fine, sieved through 80 and 120 mesh sieves for homogeneous particle size, then stored in a desiccator. <em>(Zikri et al., 2022)</em>",
+    'pg8_proc3': "Oranges are peeled, squeezed, and filtered. A 10% orange solution is prepared: 10 mL fresh juice is placed in a measuring cylinder, distilled water added to 100 mL, stirred homogeneously (v/v).",
+    'pg8_proc4': "Take 25 mL of 10% orange solution. Add PP indicator, then titrate with 0.1 M NaOH until a permanent pink color forms. Record the NaOH volume as initial concentration (C₀) data.",
+    'pg8_proc5': "Mix 25 mL of 10% orange solution + 1 g adsorbent in an Erlenmeyer flask. Stir on a hotplate stirrer at 120 rpm for 15, 30, 45, and 60 min. Centrifuge at 6000 rpm for 15 min (25°C). Take 10 mL supernatant, titrate again with 0.1 M NaOH to determine final concentration (Cₑ).",
+
+    // FORMULA BOX TITLES
+    'pg9_formula_title': "📐 Cₑ Calculation Formula:",
+    'pg9_formula_note':  "Citric acid is triprotic (H₃C₆H₅O₇ + 3NaOH → products + 3H₂O) | MW = 192.12 g/mol | V<sub>effective titration</sub> = 2.5 mL",
+    'pg10_formula_title': "📐 Key Formulas:",
+
+    'pg12_header': "🏁 Conclusion & References",
+    'pg12_concl_title': "✅ Conclusion",
+    'pg12_concl_ph': "Write your conclusion based on observations, calculations, and discussion...",
+    'pg12_ref_title': "📚 References",
+    'pg12_btn_print': "🖨️ Print LKM to PDF",
+    'pg12_btn_drive': "Open Google Drive Folder",
+    'pg12_print_note': "1. Click <b>Print to PDF</b> and save to your device.<br>2. Click <b>Open Google Drive Folder</b> to upload the PDF.",
+    'pg12_id_title': "👤 Student Identity",
+    'pg12_id_empty': "Not filled. Return to Cover to enter identity.",
+    'pg12_alert_no_id': "⚠️ Identity not filled. Return to Cover page.",
+
+    'wc-1': "0 / 200 words", 'wc-2': "0 / 200 words", 'wc-3': "0 / 200 words",
+    'wc_unit': "words",
+    'id_label_kelompok': "Group", 'id_label_anggota': "Members",
+    'langmuir-reg': "Graph will appear after data is entered.",
+    'freundlich-reg': "Graph will appear after data is entered.",
+    'concl-text': "Write your conclusion here...",
+  }
+};
+
+// ============================================================
+//  KONTEN TEORI BILINGUAL
+// ============================================================
+const teoriHTML = {
+  id: `
+    <h3>1. Konsep Dasar Adsorpsi &amp; Karbon Aktif</h3>
+    <p>Adsorpsi adalah proses menempelnya zat terlarut (adsorbat) pada permukaan zat penyerap (adsorben) karena adanya gaya tarik menarik hingga tercapai kondisi seimbang, di mana tidak ada lagi zat yang menempel. Proses ini terjadi karena partikel cenderung berkumpul di permukaan penyerap, terutama pada bahan berpori seperti karbon aktif (Musah et al., 2022).</p>
+    <p>Activated carbon (AC) merupakan bahan karbon yang berasal dari material organik kaya karbon seperti pelepah kelapa sawit, tempurung kelapa, kayu, batu bara, dan gambut. Berdasarkan bentuknya, AC dibedakan menjadi granul, bubuk, dan pelet, dengan struktur berpori (mikro, meso, dan makro) serta luas permukaan antara 500–3000 m²/g. Karena sifat porositas dan reaktivitas permukaannya yang tinggi, AC digunakan secara luas dalam pengolahan air limbah, industri petrokimia, farmasi, hingga penyimpanan energi seperti superkapasitor (Sultana et al., 2022).</p>
+    <p>Produksi Oil Palm Frond (OPF) di Indonesia menunjukkan tren meningkat: 150,2 juta ton pada 2018, 152,3 juta ton pada 2019, dan 156,5 juta ton pada 2020 (Nabila et al., 2023). Komposisi kimia OPF terdiri atas selulosa (40,03–51,50%), hemiselulosa (17,40–27,08%), lignin (14,49–22,2%), abu (3,6–4,67%), serta ekstraktif (3,81–8,71%) (Zakaria et al., 2024a). Kandungan karbon yang tinggi menjadikan OPF bahan potensial untuk pembuatan karbon aktif.</p>
+    <p>Penelitian oleh (Zikri et al., 2022) menunjukkan bahwa arang dari pelepah kelapa sawit yang dikarbonisasi pada suhu 400–600°C memiliki luas permukaan sekitar 600 m²/g, dengan efisiensi penyerapan Fe(III) tertinggi pada suhu 500°C sebesar 0,054 mg dalam 100 mL air gambut.</p>
+    <h3 style="margin-top:25px;">2. Jenis Adsorpsi</h3>
+    <p>Proses adsorpsi terjadi karena adanya gaya tarik antara suatu bahan (substrat) dengan permukaan bahan lain (adsorben), baik pada sistem cair–gas, cair–cair, maupun padat–cair. Berdasarkan mekanismenya, adsorpsi dibedakan menjadi dua jenis utama:</p>
+    <ul>
+      <li><strong>Adsorpsi Fisik (Physisorption):</strong> Terjadi karena gaya Van der Waals yang lemah tanpa perubahan struktur kimia. Energi yang dilepaskan relatif kecil, sekitar 20 kJ/mol, dan bersifat reversibel karena tidak terjadi perpindahan elektron antara adsorbat dan adsorben (Atkins et al., 2023). Adsorpsi jenis ini umumnya terjadi pada suhu rendah, tidak spesifik terhadap jenis adsorben, serta dapat membentuk lapisan tunggal maupun berlapis-lapis di permukaan adsorben (Jamilah et al., 2024).</li>
+      <li><strong>Adsorpsi Kimia (Chemisorption):</strong> Melibatkan pembentukan ikatan kimia antara adsorbat dan adsorben, sehingga bersifat irreversibel (Alaqarbeh, 2021). Energi ikatan yang dilepaskan jauh lebih besar, sekitar 200 kJ/mol, dan proses ini umumnya bersifat eksotermis. Adsorpsi kimia biasanya menghasilkan lapisan tunggal (monolayer) yang menempel kuat pada permukaan (Jamilah et al., 2024).</li>
+    </ul>
+    <div style="text-align:center;margin:20px 0;">
+      <img src="gambar1.jpg" alt="Ilustrasi Adsorpsi" style="max-width:100%;height:auto;border-radius:8px;box-shadow:0 4px 8px rgba(0,0,0,0.1);margin-bottom:10px;">
+      <br><small><i>Gambar 1. Ilustrasi interaksi antara permukaan adsorben dan adsorbat pada proses adsorpsi fisik dan adsorpsi kimia (Jamilah et al., 2024)</i></small>
+    </div>
+    <h3 style="margin-top:25px;">3. Karakteristik &amp; Faktor yang Mempengaruhi Adsorpsi</h3>
+    <p>Efisiensi adsorpsi pada fase cair dipengaruhi oleh beberapa parameter, di antaranya:</p>
+    <div style="text-align:center;margin:20px 0;">
+      <img src="gambar2.jpg" alt="Ilustrasi Kedua" style="max-width:100%;height:auto;border-radius:8px;box-shadow:0 4px 8px rgba(0,0,0,0.1);margin-bottom:10px;">
+      <br><small><i>Gambar 2. Penjelasan atau keterangan untuk gambar kedua Anda diletakkan di sini.</i></small>
+    </div>
+    <p><strong>a. Pengaruh Konsentrasi Awal Adsorbat</strong><br>Konsentrasi awal adsorbat sangat memengaruhi efisiensi dan kapasitas adsorpsi karena menentukan jumlah molekul yang dapat terikat pada keadaan setimbang. Umumnya, efisiensi penghilangan menurun saat konsentrasi awal meningkat, disebabkan oleh kejenuhan situs aktif pada permukaan adsorben.</p>
+    <p><strong>b. Efek pH Larutan</strong><br>pH merupakan parameter paling berpengaruh dalam proses adsorpsi karena menentukan muatan permukaan adsorben, tingkat ionisasi adsorbat, serta interaksi elektrostatik di antara keduanya. Pada kondisi asam, permukaan adsorben terprotonasi dan bermuatan positif, sedangkan pada kondisi basa, adsorben terdeprotonasi menjadi bermuatan negatif.</p>
+    <p><strong>c. Efek Dosis Adsorben</strong><br>Jumlah adsorben menentukan rasio antara adsorben dan adsorbat. Peningkatan dosis adsorben umumnya meningkatkan efisiensi penghilangan karena lebih banyak situs aktif yang tersedia, tetapi kapasitas adsorpsi per satuan massa (q<sub>e</sub>) dapat menurun akibat ketidakterisian penuh situs aktif.</p>
+    <p><strong>d. Efek Ukuran Partikel Adsorben</strong><br>Ukuran partikel berpengaruh besar terhadap luas permukaan spesifik (SSA). Partikel berukuran kecil memiliki luas permukaan dan jumlah situs aktif lebih besar, sehingga meningkatkan efisiensi dan laju adsorpsi.</p>
+    <p><strong>e. Efek Temperatur Larutan</strong><br>Suhu berperan penting dalam menentukan energi kinetik, aktivitas permukaan, dan kestabilan adsorben. Pada <em>chemisorption</em>, efisiensi meningkat seiring kenaikan suhu, sedangkan pada <em>physisorption</em>, suhu tinggi justru menurunkan efisiensi karena melemahkan ikatan adsorbat–adsorben.</p>
+    <p><strong>f. Kecepatan Pengadukan &amp; Waktu Kontak</strong><br>Kecepatan pengadukan mempercepat difusi ion ke permukaan adsorben. Sementara waktu kontak memengaruhi efisiensi; peningkatan waktu kontak mengurangi hambatan perpindahan massa, namun kontak yang terlalu lama justru dapat menyebabkan desorpsi.</p>
+    <h3 style="margin-top:25px;">4. Isoterm Adsorpsi</h3>
+    <p>Karakteristik dan mekanisme penyerapan ion Fe(III) dapat dianalisis menggunakan model isoterm Langmuir dan Freundlich. Melalui fitting data eksperimen, diperoleh parameter penting seperti kapasitas maksimum adsorpsi (q<sub>max</sub>), konstanta Langmuir (K<sub>L</sub>), dan parameter Freundlich (K<sub>f</sub> dan n).</p>
+    <p><strong>A. Model Isoterm Langmuir</strong><br>Menggambarkan proses adsorpsi pada permukaan adsorben yang homogen, membentuk lapisan tunggal (<em>monolayer</em>). Semua situs aktif di permukaan dianggap memiliki energi yang sama.</p>
+    <div style="background-color:#fcfcfc;padding:15px;border-left:4px solid #007bff;margin:10px 0;font-family:'Times New Roman',Times,serif;font-size:1.1rem;overflow-x:auto;">
+      <i>Bentuk Non-linear:</i><br>
+      q<sub>e</sub> = (q<sub>max</sub> · K<sub>L</sub> · C<sub>e</sub>) / (1 + K<sub>L</sub> · C<sub>e</sub>) &nbsp; ... (1)<br><br>
+      <i>Bentuk Linear:</i><br>
+      C<sub>e</sub>/q<sub>e</sub> = (1/q<sub>max</sub>) · C<sub>e</sub> + 1/(q<sub>max</sub> · K<sub>L</sub>) &nbsp; ... (2)<br>
+      <span style="color:#555;font-size:0.9rem;">(y = mx + c)</span>
+    </div>
+    <p>Model ini dianalisis dengan memplot grafik C<sub>e</sub>/q<sub>e</sub> terhadap C<sub>e</sub>.</p>
+    <p><strong>B. Model Isoterm Freundlich</strong><br>Menggambarkan adsorpsi pada permukaan adsorben yang tidak seragam (heterogen), memungkinkan pembentukan multilayer.</p>
+    <div style="background-color:#fcfcfc;padding:15px;border-left:4px solid #28a745;margin:10px 0;font-family:'Times New Roman',Times,serif;font-size:1.1rem;overflow-x:auto;">
+      <i>Bentuk Non-linear:</i><br>
+      q<sub>e</sub> = K<sub>f</sub> · C<sub>e</sub><sup>1/n<sub>f</sub></sup> &nbsp; ... (3)<br><br>
+      <i>Bentuk Linear:</i><br>
+      Log q<sub>e</sub> = (1/n<sub>f</sub>) · Log C<sub>e</sub> + Log K<sub>f</sub> &nbsp; ... (4)<br>
+      <span style="color:#555;font-size:0.9rem;">(y = mx + c)</span>
+    </div>
+    <p>Model Freundlich dianalisis dengan memplot log q<sub>e</sub> terhadap log C<sub>e</sub>.</p>
+    <h3 style="margin-top:25px;">5. Keunggulan Pelepah Sawit dalam Praktik Green Chemistry</h3>
+    <p>Pelepah kelapa sawit (Oil Palm Frond/OPF) merupakan salah satu limbah biomassa terbesar dari perkebunan kelapa sawit yang jumlahnya dapat mencapai ratusan juta ton per tahun. Di Sumatera Selatan, kelapa sawit adalah komoditas utama, sehingga pelepah sawit sangat mudah diperoleh, termasuk di area kampus Universitas Sriwijaya (Unsri).</p>
+    <div style="text-align:center;margin:20px 0;">
+      <img src="gambar3.jpg" alt="Ilustrasi Ketiga" style="max-width:100%;height:auto;border-radius:8px;box-shadow:0 4px 8px rgba(0,0,0,0.1);margin-bottom:10px;">
+      <br><small><i>Gambar 3. Penjelasan atau keterangan untuk gambar ketiga Anda diletakkan di sini.</i></small>
+    </div>
+    <p>Dari perspektif <em>green chemistry</em>, pemanfaatan OPF menjadi arang aktif sejalan dengan prinsip pengurangan limbah dan pemanfaatan sumber daya terbarukan. Penggunaan OPF dapat mengurangi ketergantungan pada bahan baku lain seperti kayu atau batubara, sekaligus memberikan nilai tambah pada limbah yang selama ini kurang termanfaatkan.</p>
+    <p>Selain manfaat teknis dan lingkungan, pemanfaatan OPF untuk arang aktif juga membawa dampak sosial-ekonomi yang signifikan. Pengolahan OPF dapat membuka peluang usaha baru di daerah penghasil sawit, termasuk sekitar kampus Unsri, serta menciptakan lapangan kerja dan meningkatkan pendapatan masyarakat lokal. Pendekatan ini mendukung ekonomi sirkular dengan mengubah limbah menjadi produk bernilai tinggi sekaligus membantu pengurangan emisi karbon.</p>
+  `,
+  en: `
+    <h3>1. Basic Concepts of Adsorption &amp; Activated Carbon</h3>
+    <p>Adsorption is the process by which dissolved substances (adsorbate) accumulate on the surface of an absorbent material (adsorbent) due to attractive forces until equilibrium is reached, where no further accumulation occurs. This happens because particles tend to concentrate at surfaces, particularly on porous materials such as activated carbon (Musah et al., 2022).</p>
+    <p>Activated carbon (AC) is a carbon-based material derived from organic, carbon-rich precursors such as oil palm fronds, coconut shells, wood, coal, and peat. Based on form, AC is classified as granular, powdered, or pelletized, featuring microporous, mesoporous, and macroporous structures with a specific surface area of 500–3000 m²/g. Due to its high porosity and surface reactivity, AC is widely used in wastewater treatment, petrochemical industries, pharmaceuticals, and energy storage such as supercapacitors (Sultana et al., 2022).</p>
+    <p>Oil Palm Frond (OPF) production in Indonesia shows an increasing trend: 150.2 million tonnes in 2018, 152.3 million tonnes in 2019, and 156.5 million tonnes in 2020 (Nabila et al., 2023). The chemical composition of OPF consists of cellulose (40.03–51.50%), hemicellulose (17.40–27.08%), lignin (14.49–22.2%), ash (3.6–4.67%), and extractives (3.81–8.71%) (Zakaria et al., 2024a). Its high carbon content makes OPF a promising raw material for activated carbon production.</p>
+    <p>Research by Zikri et al. (2022) demonstrated that charcoal from oil palm fronds carbonized at 400–600°C has a surface area of approximately 600 m²/g, with the highest Fe(III) adsorption efficiency at 500°C of 0.054 mg per 100 mL of peat water.</p>
+    <h3 style="margin-top:25px;">2. Types of Adsorption</h3>
+    <p>Adsorption occurs due to attractive forces between a substance (substrate) and the surface of another material (adsorbent), in liquid–gas, liquid–liquid, or solid–liquid systems. Based on mechanism, adsorption is classified into two main types:</p>
+    <ul>
+      <li><strong>Physical Adsorption (Physisorption):</strong> Occurs via weak Van der Waals forces without changes to the chemical structure. The energy released is relatively small, around 20 kJ/mol, and the process is reversible since no electron transfer occurs between adsorbate and adsorbent (Atkins et al., 2023). Physisorption typically occurs at low temperatures, is non-specific to the adsorbent type, and can form monolayers or multilayers on the adsorbent surface (Jamilah et al., 2024).</li>
+      <li><strong>Chemical Adsorption (Chemisorption):</strong> Involves the formation of chemical bonds between the adsorbate and adsorbent, making it irreversible (Alaqarbeh, 2021). The binding energy released is much greater, around 200 kJ/mol, and the process is generally exothermic. Chemisorption usually produces a firmly bound monolayer on the surface (Jamilah et al., 2024).</li>
+    </ul>
+    <div style="text-align:center;margin:20px 0;">
+      <img src="gambar1.jpg" alt="Adsorption Illustration" style="max-width:100%;height:auto;border-radius:8px;box-shadow:0 4px 8px rgba(0,0,0,0.1);margin-bottom:10px;">
+      <br><small><i>Figure 1. Illustration of the interaction between the adsorbent surface and adsorbate in physical and chemical adsorption (Jamilah et al., 2024)</i></small>
+    </div>
+    <h3 style="margin-top:25px;">3. Characteristics &amp; Factors Affecting Adsorption</h3>
+    <p>The efficiency of adsorption in liquid phase is influenced by several parameters, including:</p>
+    <div style="text-align:center;margin:20px 0;">
+      <img src="gambar2.jpg" alt="Second Illustration" style="max-width:100%;height:auto;border-radius:8px;box-shadow:0 4px 8px rgba(0,0,0,0.1);margin-bottom:10px;">
+      <br><small><i>Figure 2. Caption for your second figure goes here.</i></small>
+    </div>
+    <p><strong>a. Effect of Initial Adsorbate Concentration</strong><br>The initial concentration significantly affects adsorption efficiency and capacity by determining the number of molecules available for binding at equilibrium. Generally, removal efficiency decreases as initial concentration increases, due to saturation of active sites on the adsorbent surface.</p>
+    <p><strong>b. Effect of Solution pH</strong><br>pH is the most influential parameter in adsorption as it determines the surface charge of the adsorbent, the ionization state of the adsorbate, and the electrostatic interactions between them. Under acidic conditions, the adsorbent surface is protonated and positively charged, while under basic conditions it becomes deprotonated and negatively charged.</p>
+    <p><strong>c. Effect of Adsorbent Dose</strong><br>The amount of adsorbent determines the adsorbent-to-adsorbate ratio. Increasing the adsorbent dose generally improves removal efficiency due to more available active sites, but adsorption capacity per unit mass (q<sub>e</sub>) may decrease due to incomplete occupation of active sites.</p>
+    <p><strong>d. Effect of Adsorbent Particle Size</strong><br>Particle size greatly affects specific surface area (SSA). Smaller particles provide a greater surface area and number of active sites, thereby increasing adsorption efficiency and rate.</p>
+    <p><strong>e. Effect of Solution Temperature</strong><br>Temperature plays a critical role in determining kinetic energy, surface activity, and adsorbent stability. In chemisorption, efficiency increases with rising temperature, while in physisorption, high temperatures reduce efficiency by weakening the adsorbate–adsorbent bond.</p>
+    <p><strong>f. Stirring Speed &amp; Contact Time</strong><br>Stirring speed accelerates the diffusion of ions to the adsorbent surface. Contact time affects efficiency; longer contact time reduces mass transfer resistance, but excessively long contact may cause desorption.</p>
+    <h3 style="margin-top:25px;">4. Adsorption Isotherms</h3>
+    <p>The adsorption characteristics and mechanism for Fe(III) ions can be analyzed using the Langmuir and Freundlich isotherm models. By fitting experimental data, key parameters are obtained: maximum adsorption capacity (q<sub>max</sub>), the Langmuir constant (K<sub>L</sub>), and Freundlich parameters (K<sub>f</sub> and n).</p>
+    <p><strong>A. Langmuir Isotherm Model</strong><br>Describes adsorption on a homogeneous adsorbent surface, forming a single layer (monolayer). All active sites on the surface are assumed to have equal energy.</p>
+    <div style="background-color:#fcfcfc;padding:15px;border-left:4px solid #007bff;margin:10px 0;font-family:'Times New Roman',Times,serif;font-size:1.1rem;overflow-x:auto;">
+      <i>Non-linear form:</i><br>
+      q<sub>e</sub> = (q<sub>max</sub> · K<sub>L</sub> · C<sub>e</sub>) / (1 + K<sub>L</sub> · C<sub>e</sub>) &nbsp; ... (1)<br><br>
+      <i>Linear form:</i><br>
+      C<sub>e</sub>/q<sub>e</sub> = (1/q<sub>max</sub>) · C<sub>e</sub> + 1/(q<sub>max</sub> · K<sub>L</sub>) &nbsp; ... (2)<br>
+      <span style="color:#555;font-size:0.9rem;">(y = mx + c)</span>
+    </div>
+    <p>This model is analyzed by plotting C<sub>e</sub>/q<sub>e</sub> against C<sub>e</sub>.</p>
+    <p><strong>B. Freundlich Isotherm Model</strong><br>Describes adsorption on a heterogeneous adsorbent surface, allowing for multilayer formation.</p>
+    <div style="background-color:#fcfcfc;padding:15px;border-left:4px solid #28a745;margin:10px 0;font-family:'Times New Roman',Times,serif;font-size:1.1rem;overflow-x:auto;">
+      <i>Non-linear form:</i><br>
+      q<sub>e</sub> = K<sub>f</sub> · C<sub>e</sub><sup>1/n<sub>f</sub></sup> &nbsp; ... (3)<br><br>
+      <i>Linear form:</i><br>
+      Log q<sub>e</sub> = (1/n<sub>f</sub>) · Log C<sub>e</sub> + Log K<sub>f</sub> &nbsp; ... (4)<br>
+      <span style="color:#555;font-size:0.9rem;">(y = mx + c)</span>
+    </div>
+    <p>The Freundlich model is analyzed by plotting log q<sub>e</sub> against log C<sub>e</sub>.</p>
+    <h3 style="margin-top:25px;">5. Advantages of Oil Palm Fronds in Green Chemistry Practice</h3>
+    <p>Oil Palm Frond (OPF) is one of the largest biomass wastes from oil palm plantations, with production potentially reaching hundreds of millions of tonnes per year. In South Sumatra, oil palm is the primary commodity, making OPF readily available, including on the campus grounds of Sriwijaya University (Unsri).</p>
+    <div style="text-align:center;margin:20px 0;">
+      <img src="gambar3.jpg" alt="Third Illustration" style="max-width:100%;height:auto;border-radius:8px;box-shadow:0 4px 8px rgba(0,0,0,0.1);margin-bottom:10px;">
+      <br><small><i>Figure 3. Caption for your third figure goes here.</i></small>
+    </div>
+    <p>From a <em>green chemistry</em> perspective, converting OPF into activated carbon aligns with waste reduction principles and the use of renewable resources. Using OPF reduces dependence on other raw materials such as wood or coal, while adding value to waste that has previously been underutilized.</p>
+    <p>Beyond technical and environmental benefits, utilizing OPF for activated carbon also brings significant socio-economic impact. OPF processing can open new business opportunities in palm oil-producing areas, including around the Unsri campus, creating jobs and increasing local community income. This approach supports a circular economy by transforming waste into high-value products while helping to reduce carbon emissions.</p>
+  `
+};
+
+function updateTeoriSection(lang) {
+  const el = document.getElementById('teori-content');
+  if (el) el.innerHTML = teoriHTML[lang] || teoriHTML['id'];
+}
+
+// ============================================================
+//  FUNGSI GANTI BAHASA
+// ============================================================
+let currentLang = 'id';
+
+function gantiBahasa(lang) {
+  currentLang = lang;
+  const D = kamusBahasa[lang];
+  document.title = D['judul_tab'] || document.title;
+  const skipKeys = ['judul_tab','indicator-page','page_titles'];
+  for (let key in D) {
+    if (skipKeys.includes(key)) continue;
+    const el = document.getElementById(key);
+    if (!el) continue;
+    const tag = el.tagName, type = (el.type||'').toLowerCase();
+    if (tag==='TEXTAREA'||(tag==='INPUT'&&type!=='button'&&type!=='submit')) {
+      el.placeholder = D[key];
+    } else { el.innerHTML = D[key]; }
+  }
+  updateNav();
+  document.getElementById('lang-btn-id').classList.toggle('lang-active', lang==='id');
+  document.getElementById('lang-btn-en').classList.toggle('lang-active', lang==='en');
+  document.documentElement.lang = lang;
+  localStorage.setItem('bahasa_elkm', lang);
+  if (typeof loadDataFromStorage==='function') loadDataFromStorage();
+  if (typeof initCalcRows==='function') initCalcRows(true);
+  if (typeof initManualRows==='function') initManualRows();
+  if (typeof refreshWcDisplays==='function') refreshWcDisplays();
+  if (typeof updateIdentitySummary==='function') updateIdentitySummary();
+  if (typeof updateTeoriSection==='function') updateTeoriSection(lang);
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  const saved = localStorage.getItem('bahasa_elkm') || 'id';
+  gantiBahasa(saved);
+});
+</script>
+
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --green-dark:#1a4731; --green-mid:#2d7a50; --green-light:#4caf7d;
+  --gold:#c9a84c; --gold-light:#f0d080; --cream:#faf7f0; --paper:#fffef8;
+  --text-dark:#1e1e1e; --text-mid:#3a3a3a; --text-light:#6b6b6b;
+  --border:#d4c9a8; --shadow:rgba(0,0,0,0.18); --radius:8px;
+  --page-w:960px; --page-h:680px; --nav-h:64px;
+}
+html,body { height:100%; font-family:'Georgia','Times New Roman',serif; background:#2a2a2a; color:var(--text-dark); overflow:hidden; }
+#lang-switcher { position:fixed; top:14px; right:18px; z-index:9999; display:flex; gap:6px; }
+.lang-btn { padding:6px 14px; cursor:pointer; border:2px solid transparent; border-radius:20px; font-family:inherit; font-size:0.82rem; font-weight:bold; transition:all 0.2s; background:rgba(255,255,255,0.15); color:#fff; backdrop-filter:blur(4px); }
+.lang-btn:hover { background:rgba(255,255,255,0.25); }
+.lang-btn.lang-active { background:var(--gold); color:var(--green-dark); border-color:var(--gold-light); }
+#book-wrapper { display:flex; flex-direction:column; align-items:center; justify-content:center; width:100vw; height:100vh; padding:12px 8px; gap:12px; }
+#book { position:relative; width:min(var(--page-w),98vw); height:min(var(--page-h),calc(100vh - var(--nav-h) - 48px)); overflow:hidden; border-radius:4px 12px 12px 4px; box-shadow:-6px 6px 30px rgba(0,0,0,0.5),inset -3px 0 8px rgba(0,0,0,0.15),6px 6px 30px rgba(0,0,0,0.3); background:#fff; }
+.page { position:absolute; inset:0; overflow-y:auto; overflow-x:hidden; background:var(--paper); transform:translateX(100%); transition:transform 0.45s cubic-bezier(0.4,0,0.2,1); will-change:transform; scrollbar-width:thin; scrollbar-color:var(--gold) transparent; }
+.page::-webkit-scrollbar { width:5px; }
+.page::-webkit-scrollbar-thumb { background:var(--gold); border-radius:4px; }
+.page.active { transform:translateX(0); }
+.page.prev   { transform:translateX(-100%); }
+#book::before { content:''; position:absolute; left:0; top:0; width:18px; height:100%; background:linear-gradient(to right,rgba(0,0,0,0.25),transparent); z-index:10; pointer-events:none; border-radius:4px 0 0 4px; }
+#nav-bar { display:flex; align-items:center; justify-content:space-between; width:min(var(--page-w),98vw); height:var(--nav-h); background:var(--green-dark); border-radius:8px; padding:0 20px; box-shadow:0 4px 16px rgba(0,0,0,0.4); }
+.nav-btn { display:flex; align-items:center; gap:8px; background:var(--gold); color:var(--green-dark); border:none; padding:10px 22px; border-radius:6px; font-family:inherit; font-size:0.88rem; font-weight:bold; cursor:pointer; transition:background 0.2s,transform 0.1s; }
+.nav-btn:hover { background:var(--gold-light); transform:translateY(-1px); }
+.nav-btn:disabled { background:#5a5a4a; color:#9a9a8a; cursor:not-allowed; transform:none; }
+#page-indicator { text-align:center; color:#fff; font-size:0.8rem; line-height:1.4; }
+#page-indicator span { display:block; color:var(--gold-light); font-size:1rem; font-weight:bold; }
+.page-header { background:linear-gradient(135deg,var(--green-dark) 0%,var(--green-mid) 100%); color:#fff; padding:16px 28px 14px; display:flex; align-items:center; justify-content:space-between; border-bottom:3px solid var(--gold); }
+.page-header h2 { font-size:1.1rem; letter-spacing:0.5px; font-weight:bold; }
+.page-header .pg-num { background:var(--gold); color:var(--green-dark); border-radius:50%; width:34px; height:34px; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:0.9rem; flex-shrink:0; }
+.page-content { padding:24px 32px 28px; }
+#page-1 { background:linear-gradient(160deg,rgba(26,71,49,0.92),rgba(15,40,28,0.97)),url('https://images.unsplash.com/photo-1504701954957-2010ec3bcec1?w=1200&q=80') center/cover; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; overflow-y:auto; }
+h1 { font-size:1.4rem; color:var(--green-dark); margin-bottom:12px; }
+h3 { font-size:1.05rem; color:var(--green-dark); margin:14px 0 8px; }
+h4 { font-size:0.95rem; color:var(--green-mid); margin:12px 0 6px; }
+p  { font-size:0.9rem; line-height:1.75; color:var(--text-mid); margin-bottom:10px; text-align:justify; }
+ul,ol { padding-left:20px; margin-bottom:10px; }
+li { font-size:0.88rem; line-height:1.7; color:var(--text-mid); margin-bottom:4px; }
+.kata-pengantar-card { background:linear-gradient(135deg,#f9f7f0,#fff); border:1px solid var(--border); border-left:5px solid var(--green-mid); border-radius:var(--radius); padding:20px 24px; min-height:280px; font-size:0.9rem; line-height:1.85; color:var(--text-mid); font-style:italic; }
+.signature-area { margin-top:20px; text-align:right; border-top:1px dashed var(--border); padding-top:14px; }
+.signature-area p { font-size:0.82rem; color:var(--text-light); margin:2px 0; text-align:right; }
+.signature-line { display:inline-block; width:160px; border-bottom:1px solid var(--text-dark); margin-top:32px; margin-bottom:4px; }
+.toc-list { list-style:none; padding:0; }
+.toc-item { display:flex; align-items:center; gap:0; border-bottom:1px dotted var(--border); padding:8px 4px; cursor:pointer; transition:background 0.15s; border-radius:4px; }
+.toc-item:hover { background:#f0ede4; }
+.toc-num { min-width:32px; height:32px; background:var(--green-dark); color:#fff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.78rem; font-weight:bold; margin-right:14px; flex-shrink:0; }
+.toc-title { flex:1; font-size:0.88rem; color:var(--text-mid); }
+.toc-dots { flex:1; border-bottom:1px dotted var(--border); margin:0 8px; }
+.toc-page { font-size:0.8rem; color:var(--green-mid); font-weight:bold; }
+.info-box { background:linear-gradient(135deg,#e8f5ee,#f0faf4); border:1px solid #a8d8b8; border-radius:var(--radius); padding:14px 18px; margin-bottom:12px; }
+.info-box h4 { color:var(--green-dark); margin-bottom:6px; font-size:0.92rem; }
+.info-box p { font-size:0.85rem; margin:0; }
+.warning-box { background:#fff8e6; border:1px solid #e8c84c; border-left:4px solid #c9a84c; border-radius:var(--radius); padding:12px 16px; margin-bottom:10px; }
+.warning-box p { font-size:0.85rem; margin:0; color:#5a4800; }
+.sim-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:16px 0; }
+.sim-card { background:#fff; border:1px solid var(--border); border-radius:10px; padding:16px; text-align:center; transition:box-shadow 0.2s,transform 0.2s; box-shadow:0 2px 8px rgba(0,0,0,0.06); }
+.sim-card:hover { box-shadow:0 6px 20px rgba(0,0,0,0.12); transform:translateY(-2px); }
+.sim-icon { font-size:2.2rem; margin-bottom:8px; display:block; }
+.sim-card h4 { font-size:0.88rem; color:var(--green-dark); margin-bottom:6px; }
+.sim-card p  { font-size:0.78rem; color:var(--text-light); margin-bottom:12px; line-height:1.5; }
+.btn-sim { display:inline-block; background:var(--green-dark); color:#fff; padding:8px 18px; border-radius:6px; font-size:0.82rem; font-weight:bold; text-decoration:none; cursor:pointer; border:none; transition:background 0.2s; }
+.btn-sim:hover { background:var(--green-mid); }
+.proc-step { display:flex; align-items:flex-start; gap:14px; background:#fff; border:1px solid var(--border); border-radius:8px; padding:14px 16px; margin-bottom:10px; box-shadow:0 1px 4px rgba(0,0,0,0.05); }
+.step-num { min-width:36px; height:36px; background:var(--green-dark); color:#fff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:0.9rem; flex-shrink:0; }
+.step-body { flex:1; }
+.step-body h4 { font-size:0.9rem; color:var(--green-dark); margin:0 0 4px; }
+.step-body p  { font-size:0.82rem; margin:0 0 8px; }
+.instruction-banner { background:linear-gradient(135deg,var(--green-dark),var(--green-mid)); color:#fff; border-radius:8px; padding:14px 18px; margin-top:14px; font-size:0.85rem; line-height:1.6; text-align:center; }
+.instruction-banner strong { color:var(--gold-light); }
+.data-table-wrap { overflow-x:auto; margin:14px 0; }
+.data-table { width:100%; border-collapse:collapse; font-size:0.85rem; font-family:'Arial',sans-serif; }
+.data-table th { background:var(--green-dark); color:#fff; padding:10px 12px; text-align:center; font-size:0.8rem; }
+.data-table td { border:1px solid #d4d0c0; padding:9px 12px; text-align:center; background:#fff; color:var(--text-mid); }
+.data-table tr:nth-child(even) td { background:#f7f5ee; }
+.data-table td.empty-cell { color:#bbb; font-style:italic; font-size:0.78rem; }
+.btn-refresh { background:var(--green-mid); color:#fff; border:none; padding:9px 20px; border-radius:6px; cursor:pointer; font-size:0.85rem; font-family:inherit; transition:background 0.2s; }
+.btn-refresh:hover { background:var(--green-dark); }
+.status-badge { display:inline-flex; align-items:center; gap:6px; padding:5px 12px; border-radius:20px; font-size:0.78rem; font-family:'Arial',sans-serif; margin-bottom:10px; }
+.status-badge.ok   { background:#e6f4ea; color:#1a4731; border:1px solid #a8d8b8; }
+.status-badge.warn { background:#fff8e6; color:#5a4800; border:1px solid #e8c84c; }
+
+/* ===== FIXED PARAMS BOX (baru untuk hal. 10) ===== */
+.param-fixed-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:16px; }
+.param-fixed-item { background:#f0faf4; border:1px solid #a8d8b8; border-radius:8px; padding:12px 16px; }
+.param-fixed-item .param-label { font-size:0.75rem; color:var(--text-light); font-family:'Arial',sans-serif; margin-bottom:4px; }
+.param-fixed-item .param-value { font-size:1rem; font-weight:bold; color:var(--green-dark); font-family:'Arial',sans-serif; }
+.param-fixed-item .param-sub { font-size:0.72rem; color:var(--text-light); margin-top:3px; font-family:'Arial',sans-serif; }
+.param-formula-box { background:#fff8e6; border:1px solid #e8c84c; border-left:4px solid var(--gold); border-radius:8px; padding:12px 16px; margin-bottom:14px; font-size:0.85rem; line-height:1.7; color:var(--text-mid); }
+
+.calc-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; }
+.calc-field label { display:block; font-size:0.78rem; color:var(--text-light); margin-bottom:3px; font-family:'Arial',sans-serif; }
+.calc-field input { width:100%; padding:7px 10px; border:1px solid var(--border); border-radius:5px; font-size:0.85rem; font-family:'Arial',sans-serif; color:var(--text-mid); background:#fff; outline:none; transition:border-color 0.2s; }
+.calc-field input:focus { border-color:var(--green-mid); }
+.btn-calc { background:var(--gold); color:var(--green-dark); border:none; padding:9px 22px; border-radius:6px; font-size:0.88rem; font-weight:bold; cursor:pointer; font-family:inherit; transition:background 0.2s; }
+.btn-calc:hover { background:var(--gold-light); }
+.chart-container { width:100%; max-width:420px; background:#fff; border:1px solid var(--border); border-radius:8px; padding:12px; margin-bottom:14px; }
+.chart-container canvas { max-height:220px; }
+.reg-result { font-family:'Arial',sans-serif; font-size:0.8rem; color:var(--text-mid); margin-top:6px; line-height:1.6; background:#f7f5ee; padding:6px 10px; border-radius:4px; }
+.reg-result strong { color:var(--green-dark); }
+.charts-flex { display:flex; gap:14px; flex-wrap:wrap; }
+.charts-flex .chart-container { flex:1; min-width:260px; }
+.essay-q { background:#fff; border:1px solid var(--border); border-left:4px solid var(--gold); border-radius:6px; padding:14px 16px; margin-bottom:14px; }
+.essay-q h4 { font-size:0.9rem; color:var(--green-dark); margin-bottom:8px; }
+.essay-q p  { font-size:0.85rem; margin-bottom:8px; color:var(--text-mid); }
+.essay-q textarea { width:100%; min-height:90px; padding:9px 12px; border:1px solid var(--border); border-radius:5px; font-size:0.85rem; font-family:'Arial',sans-serif; resize:vertical; color:var(--text-mid); background:#fafaf5; outline:none; transition:border-color 0.2s; }
+.essay-q textarea:focus { border-color:var(--green-mid); }
+.wc-row { display:flex; justify-content:flex-end; align-items:center; margin-top:4px; gap:8px; }
+.wc-display { font-size:0.75rem; font-family:'Arial',sans-serif; color:var(--text-light); }
+.wc-display.warn { color:#c0392b; font-weight:bold; }
+.concl-box { background:#fff; border:1px solid var(--border); border-radius:8px; padding:14px; margin-bottom:14px; }
+.concl-box textarea { width:100%; min-height:100px; padding:9px 12px; border:1px solid var(--border); border-radius:5px; font-size:0.85rem; font-family:'Arial',sans-serif; resize:vertical; outline:none; }
+.ref-list { list-style:none; padding:0; counter-reset:ref-counter; }
+.ref-list li { counter-increment:ref-counter; display:flex; gap:10px; margin-bottom:8px; font-size:0.82rem; line-height:1.6; color:var(--text-mid); padding-bottom:8px; border-bottom:1px dotted var(--border); }
+.ref-list li::before { content:"[" counter(ref-counter) "]"; font-weight:bold; color:var(--green-dark); min-width:28px; flex-shrink:0; }
+.btn-print { display:flex; align-items:center; gap:10px; background:linear-gradient(135deg,var(--green-dark),var(--green-mid)); color:#fff; border:none; padding:13px 28px; border-radius:8px; font-size:0.95rem; font-weight:bold; cursor:pointer; font-family:inherit; margin:20px auto 0; transition:opacity 0.2s,transform 0.1s; }
+.btn-print:hover { opacity:0.9; transform:translateY(-1px); }
+.section-label { display:inline-block; background:var(--green-dark); color:#fff; font-size:0.7rem; padding:2px 10px; border-radius:10px; letter-spacing:1px; text-transform:uppercase; margin-bottom:8px; }
+.toc-note { font-size:0.78rem; color:var(--text-light); text-align:center; margin-top:14px; font-style:italic; }
+.rule { border:none; border-top:1px solid var(--border); margin:14px 0; }
+.text-center { text-align:center; }
+.mt-8 { margin-top:8px; } .mt-16 { margin-top:16px; } .mb-0 { margin-bottom:0!important; }
+.cpl-table { width:100%; border-collapse:collapse; font-size:0.83rem; margin-bottom:14px; }
+.cpl-table th { background:var(--green-mid); color:#fff; padding:8px 12px; text-align:left; }
+.cpl-table td { border:1px solid #ccc; padding:8px 12px; vertical-align:top; }
+.cpl-table tr:nth-child(even) td { background:#f5f3eb; }
+.tertib-list { list-style:none; padding:0; }
+.tertib-list li { display:flex; align-items:flex-start; gap:10px; padding:7px 12px; margin-bottom:6px; background:#fff; border-radius:6px; border:1px solid var(--border); font-size:0.85rem; line-height:1.6; }
+.tertib-list li .tt-icon { min-width:22px; height:22px; border-radius:50%; background:var(--green-dark); color:#fff; display:flex; align-items:center; justify-content:center; font-size:0.7rem; font-weight:bold; flex-shrink:0; margin-top:2px; }
+.guide-step { display:flex; align-items:flex-start; gap:12px; padding:8px 0; border-bottom:1px dotted var(--border); }
+.guide-icon { font-size:1.3rem; min-width:28px; }
+.guide-body h4 { font-size:0.88rem; margin:0 0 2px; color:var(--green-dark); }
+.guide-body p { font-size:0.82rem; margin:0; }
+.chart-input-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:6px; margin-bottom:8px; }
+.chart-input-grid .cin-label { font-size:0.72rem; font-family:'Arial',sans-serif; text-align:center; padding:4px; background:var(--green-dark); color:#fff; border-radius:4px; }
+.chart-input-grid input { padding:5px 6px; border:1px solid var(--border); border-radius:4px; font-size:0.8rem; font-family:'Arial',sans-serif; text-align:center; width:100%; outline:none; }
+.chart-input-grid input:focus { border-color:var(--green-mid); }
+@media print {
+  body { background:#fff; overflow:visible; }
+  #book-wrapper { display:block; overflow:visible; height:auto; }
+  #book { display:block; width:100%; height:auto; overflow:visible; box-shadow:none; border-radius:0; }
+  #nav-bar, #lang-switcher { display:none; }
+  .page { display:block!important; position:static!important; transform:none!important; overflow:visible!important; page-break-after:always; height:auto!important; min-height:auto!important; }
+  .btn-sim,.btn-refresh,.btn-calc,.btn-print,.nav-btn { display:none; }
+}
+</style>
+</head>
+<body>
+
+<div id="lang-switcher">
+  <button id="lang-btn-id" class="lang-btn lang-active" onclick="gantiBahasa('id')">🇮🇩 ID</button>
+  <button id="lang-btn-en" class="lang-btn" onclick="gantiBahasa('en')">🇬🇧 EN</button>
+</div>
+
+<div id="book-wrapper">
+<div id="book">
+
+<!-- PAGE 1 — COVER -->
+<div id="page-1" class="page active" style="position:relative;background-image:url('gambar-cover.jpg');background-size:cover;background-position:center;min-height:100vh;">
+  <div style="position:absolute;top:0;left:0;right:0;bottom:0;background-color:rgba(0,0,0,0.4);z-index:1;"></div>
+  <div class="page-content" style="position:relative;z-index:2;text-align:center;padding-top:40px;max-width:800px;margin:0 auto;">
+    <img src="logo.png" alt="Logo" style="max-width:60px;margin-bottom:10px;">
+    <h1 id="judul_lkm" style="color:#FFF;font-family:'Arial Black',sans-serif;font-size:1.8rem;margin-bottom:5px;text-shadow:2px 2px 4px rgba(0,0,0,0.7);">Lembar Kerja Mahasiswa (LKM)</h1>
+    <h2 id="sub_judul" style="color:#FFD700;font-family:'Georgia',serif;font-size:1.3rem;margin-bottom:5px;text-shadow:2px 2px 4px rgba(0,0,0,0.7);">Praktikum Adsorpsi Larutan</h2>
+    <p id="desc_judul" style="text-align:center;color:#EEE;font-size:1rem;margin-bottom:200px;text-shadow:1px 1px 3px rgba(0,0,0,0.7);">Pemanfaatan Limbah Pelepah Kelapa Sawit</p>
+    <div style="background-color:rgba(241,241,241,0.5);border:3px solid #FFD700;border-radius:12px;padding:20px;max-width:350px;margin:10px auto 0;text-align:left;box-shadow:0 8px 16px rgba(0,0,0,0.8);backdrop-filter:blur(5px);">
+      <h3 id="judul_identitas" style="text-align:center;color:#1b5e20;font-family:'Arial',sans-serif;margin-top:0;margin-bottom:15px;font-size:1.1rem;">Identitas Praktikan</h3>
+      <label id="label_kelompok" for="input-kelompok" style="font-weight:bold;color:#333;font-family:'Arial',sans-serif;font-size:0.9rem;">Kelompok:</label>
+      <input type="text" id="input-kelompok" placeholder="Contoh: Kelompok 3" style="width:100%;padding:8px;margin-top:4px;margin-bottom:12px;border:1px solid #ccc;border-radius:6px;font-size:0.9rem;">
+      <label id="label_anggota" for="input-anggota" style="font-weight:bold;color:#333;font-family:'Arial',sans-serif;font-size:0.9rem;">Nama Anggota &amp; NIM:</label>
+      <textarea id="input-anggota" rows="3" placeholder="1. Nama Lengkap (NIM)&#10;2. Nama Lengkap (NIM)&#10;3. Nama Lengkap (NIM)" style="width:100%;padding:8px;margin-top:4px;border:1px solid #ccc;border-radius:6px;font-size:0.9rem;resize:vertical;"></textarea>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 2 — KATA PENGANTAR -->
+<div class="page" id="page-2">
+  <div class="page-header"><h2 id="judul_pengantar">📖 Kata Pengantar</h2><div class="pg-num">2</div></div>
+  <div class="page-content">
+    <div class="kata-pengantar-card">
+      <p id="teks_pengantar_1">Segala puji syukur ke hadirat Tuhan Yang Maha Esa...</p>
+      <p id="teks_pengantar_2">Penyusunan e-LKM ini juga menjadi wujud nyata...</p>
+      <div class="signature-area">
+        <p id="label_diperiksa">Diperiksa &amp; Disetujui oleh:</p>
+        <p id="label_dosen">Dosen Kimia Fisika</p>
+        <div class="signature-line"></div>
+        <p><strong>Rahmat Zikri, S.Si., M.Si.</strong></p>
+        <p>NIP. 199803182025061003</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 3 — DAFTAR ISI -->
+<div class="page" id="page-3">
+  <div class="page-header"><h2 id="judul_daftar_isi">📋 Daftar Isi</h2><div class="pg-num">3</div></div>
+  <div class="page-content">
+    <p id="sub_daftar_isi" style="margin-bottom:14px;font-size:0.85rem;color:var(--text-light);">Klik salah satu bab di bawah ini.</p>
+    <ul class="toc-list">
+      <li class="toc-item" onclick="goToPage(2)"><div class="toc-num">2</div><span id="toc_2" class="toc-title">Kata Pengantar</span><span class="toc-dots"></span><span class="toc-page">2</span></li>
+      <li class="toc-item" onclick="goToPage(4)"><div class="toc-num">4</div><span id="toc_4" class="toc-title">Informasi Umum &amp; CPL</span><span class="toc-dots"></span><span class="toc-page">4</span></li>
+      <li class="toc-item" onclick="goToPage(5)"><div class="toc-num">5</div><span id="toc_5" class="toc-title">Tata Tertib &amp; Panduan</span><span class="toc-dots"></span><span class="toc-page">5</span></li>
+      <li class="toc-item" onclick="goToPage(6)"><div class="toc-num">6</div><span id="toc_6" class="toc-title">Dasar Teori</span><span class="toc-dots"></span><span class="toc-page">6</span></li>
+      <li class="toc-item" onclick="goToPage(7)"><div class="toc-num">7</div><span id="toc_7" class="toc-title">Alat &amp; Bahan</span><span class="toc-dots"></span><span class="toc-page">7</span></li>
+      <li class="toc-item" onclick="goToPage(8)"><div class="toc-num">8</div><span id="toc_8" class="toc-title">Prosedur Kerja</span><span class="toc-dots"></span><span class="toc-page">8</span></li>
+      <li class="toc-item" onclick="goToPage(9)"><div class="toc-num">9</div><span id="toc_9" class="toc-title">Hasil Pengamatan</span><span class="toc-dots"></span><span class="toc-page">9</span></li>
+      <li class="toc-item" onclick="goToPage(10)"><div class="toc-num">10</div><span id="toc_10" class="toc-title">Perhitungan &amp; Fitting</span><span class="toc-dots"></span><span class="toc-page">10</span></li>
+      <li class="toc-item" onclick="goToPage(11)"><div class="toc-num">11</div><span id="toc_11" class="toc-title">Pembahasan</span><span class="toc-dots"></span><span class="toc-page">11</span></li>
+      <li class="toc-item" onclick="goToPage(12)"><div class="toc-num">12</div><span id="toc_12" class="toc-title">Kesimpulan &amp; Daftar Pustaka</span><span class="toc-dots"></span><span class="toc-page">12</span></li>
+    </ul>
+    <p id="tip_daftar_isi" class="toc-note">💡 Tip: Gunakan tombol "Prev" / "Next" di bawah.</p>
+  </div>
+</div>
+
+<!-- PAGE 4 — INFO UMUM & CPL -->
+<div class="page" id="page-4">
+  <div class="page-header"><h2 id="pg4_header">🎯 Informasi Umum &amp; CPL</h2><div class="pg-num">4</div></div>
+  <div class="page-content">
+    <div class="info-box"><h4 id="pg4_info_title">📌 Informasi Praktikum</h4><p id="pg4_info_body"></p></div>
+    <h3 id="pg4_cpl_title">📚 CPL</h3>
+    <table class="cpl-table">
+      <thead><tr><th id="pg4_th1">Kode CPL</th><th id="pg4_th2">Deskripsi</th><th id="pg4_th3">Indikator</th></tr></thead>
+      <tbody>
+        <tr><td><strong id="pg4_cpl1_code">CPL-1</strong></td><td id="pg4_cpl1_desc"></td><td id="pg4_cpl1_ind"></td></tr>
+        <tr><td><strong id="pg4_cpl2_code">CPL-2</strong></td><td id="pg4_cpl2_desc"></td><td id="pg4_cpl2_ind"></td></tr>
+        <tr><td><strong id="pg4_cpl3_code">CPL-3</strong></td><td id="pg4_cpl3_desc"></td><td id="pg4_cpl3_ind"></td></tr>
+        <tr><td><strong id="pg4_cpl4_code">CPL-4</strong></td><td id="pg4_cpl4_desc"></td><td id="pg4_cpl4_ind"></td></tr>
+      </tbody>
+    </table>
+    <h3 id="pg4_subcpmk_title">🔬 Sub-CPMK</h3>
+    <ul>
+      <li id="pg4_subcpmk_1"></li><li id="pg4_subcpmk_2"></li>
+      <li id="pg4_subcpmk_3"></li><li id="pg4_subcpmk_4"></li><li id="pg4_subcpmk_5"></li>
+    </ul>
+  </div>
+</div>
+
+<!-- PAGE 5 — TATA TERTIB -->
+<div class="page" id="page-5">
+  <div class="page-header"><h2 id="pg5_header">📜 Tata Tertib &amp; Panduan</h2><div class="pg-num">5</div></div>
+  <div class="page-content">
+    <h3 id="pg5_rules_title">🚦 Tata Tertib Praktikum</h3>
+    <ul class="tertib-list">
+      <li><div class="tt-icon">1</div><span id="pg5_tt1"></span></li>
+      <li><div class="tt-icon">2</div><span id="pg5_tt2"></span></li>
+      <li><div class="tt-icon">3</div><span id="pg5_tt3"></span></li>
+      <li><div class="tt-icon">4</div><span id="pg5_tt4"></span></li>
+      <li><div class="tt-icon">5</div><span id="pg5_tt5"></span></li>
+      <li><div class="tt-icon">6</div><span id="pg5_tt6"></span></li>
+      <li><div class="tt-icon">7</div><span id="pg5_tt7"></span></li>
+      <li><div class="tt-icon">8</div><span id="pg5_tt8"></span></li>
+    </ul>
+    <hr class="rule">
+    <h3 id="pg5_nav_title">🖱️ Panduan Navigasi</h3>
+    <div class="guide-step"><span class="guide-icon">◀▶</span><div class="guide-body"><h4 id="pg5_g1_h"></h4><p id="pg5_g1_p"></p></div></div>
+    <div class="guide-step"><span class="guide-icon">📋</span><div class="guide-body"><h4 id="pg5_g2_h"></h4><p id="pg5_g2_p"></p></div></div>
+    <div class="guide-step"><span class="guide-icon">🖥️</span><div class="guide-body"><h4 id="pg5_g3_h"></h4><p id="pg5_g3_p"></p></div></div>
+    <div class="guide-step"><span class="guide-icon">💾</span><div class="guide-body"><h4 id="pg5_g4_h"></h4><p id="pg5_g4_p"></p></div></div>
+    <div class="guide-step"><span class="guide-icon">🖨️</span><div class="guide-body"><h4 id="pg5_g5_h"></h4><p id="pg5_g5_p"></p></div></div>
+    <div class="warning-box mt-16"><p id="pg5_warning"></p></div>
+  </div>
+</div>
+
+<!-- PAGE 6 — DASAR TEORI -->
+<div class="page" id="page-6">
+  <div class="page-header"><h2 id="pg6_header">📗 Dasar Teori &amp; Konsep</h2><div class="pg-num">6</div></div>
+  <div class="page-content">
+    <div class="instruction-banner" style="margin-top:0;margin-bottom:20px;text-align:left;" id="pg6_sim_banner">🎓 <strong>Simulasi Konsep</strong></div>
+    <div class="sim-grid" style="grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:25px;">
+      <div class="sim-card" style="padding:10px;"><span style="font-size:1.5rem;">🌴</span><h4 id="pg6_sim1_title" style="font-size:0.8rem;margin:5px 0;">Anatomi Sawit</h4><p id="pg6_sim1_desc" style="font-size:0.7rem;margin-bottom:8px;"></p><a class="btn-sim" href="sim_3_anatomi_sawit.html" target="_blank" id="pg6_sim1_btn" style="font-size:0.7rem;padding:5px 10px;">Buka Simulasi</a></div>
+      <div class="sim-card" style="padding:10px;"><span style="font-size:1.5rem;">🔍</span><h4 id="pg6_sim2_title" style="font-size:0.8rem;margin:5px 0;">Mekanisme</h4><p id="pg6_sim2_desc" style="font-size:0.7rem;margin-bottom:8px;"></p><a class="btn-sim" href="simulasi_teori_mekanisme.html" target="_blank" id="pg6_sim2_btn" style="font-size:0.7rem;padding:5px 10px;">Buka Simulasi</a></div>
+      <div class="sim-card" style="padding:10px;"><span style="font-size:1.5rem;">⚛️</span><h4 id="pg6_sim3_title" style="font-size:0.8rem;margin:5px 0;">Tipe Sorpsi</h4><p id="pg6_sim3_desc" style="font-size:0.7rem;margin-bottom:8px;"></p><a class="btn-sim" href="simulasi_teori_jenis.html" target="_blank" id="pg6_sim3_btn" style="font-size:0.7rem;padding:5px 10px;">Buka Simulasi</a></div>
+    </div>
+    <hr class="rule">
+    <div id="teori-content" style="text-align:justify;line-height:1.6;font-size:0.95rem;">
+
+      <h3>1. Konsep Dasar Adsorpsi &amp; Karbon Aktif</h3>
+      <p>Adsorpsi adalah proses menempelnya zat terlarut (adsorbat) pada permukaan zat penyerap (adsorben) karena adanya gaya tarik menarik hingga tercapai kondisi seimbang, di mana tidak ada lagi zat yang menempel. Proses ini terjadi karena partikel cenderung berkumpul di permukaan penyerap, terutama pada bahan berpori seperti karbon aktif (Musah et al., 2022).</p>
+      <p>Activated carbon (AC) merupakan bahan karbon yang berasal dari material organik kaya karbon seperti pelepah kelapa sawit, tempurung kelapa, kayu, batu bara, dan gambut. Berdasarkan bentuknya, AC dibedakan menjadi granul, bubuk, dan pelet, dengan struktur berpori (mikro, meso, dan makro) serta luas permukaan antara 500–3000 m²/g. Karena sifat porositas dan reaktivitas permukaannya yang tinggi, AC digunakan secara luas dalam pengolahan air limbah, industri petrokimia, farmasi, hingga penyimpanan energi seperti superkapasitor (Sultana et al., 2022).</p>
+      <p>Produksi Oil Palm Frond (OPF) di Indonesia menunjukkan tren meningkat: 150,2 juta ton pada 2018, 152,3 juta ton pada 2019, dan 156,5 juta ton pada 2020 (Nabila et al., 2023). Komposisi kimia OPF terdiri atas selulosa (40,03–51,50%), hemiselulosa (17,40–27,08%), lignin (14,49–22,2%), abu (3,6–4,67%), serta ekstraktif (3,81–8,71%) (Zakaria et al., 2024a). Kandungan karbon yang tinggi menjadikan OPF bahan potensial untuk pembuatan karbon aktif.</p>
+      <p>Penelitian oleh (Zikri et al., 2022) menunjukkan bahwa arang dari pelepah kelapa sawit yang dikarbonisasi pada suhu 400–600°C memiliki luas permukaan sekitar 600 m²/g, dengan efisiensi penyerapan Fe(III) tertinggi pada suhu 500°C sebesar 0,054 mg dalam 100 mL air gambut.</p>
+
+      <h3 style="margin-top:25px;">2. Jenis Adsorpsi</h3>
+      <p>Proses adsorpsi terjadi karena adanya gaya tarik antara suatu bahan (substrat) dengan permukaan bahan lain (adsorben), baik pada sistem cair–gas, cair–cair, maupun padat–cair. Berdasarkan mekanismenya, adsorpsi dibedakan menjadi dua jenis utama:</p>
+      <ul>
+        <li><strong>Adsorpsi Fisik (Physisorption):</strong> Terjadi karena gaya Van der Waals yang lemah tanpa perubahan struktur kimia. Energi yang dilepaskan relatif kecil, sekitar 20 kJ/mol, dan bersifat reversibel karena tidak terjadi perpindahan elektron antara adsorbat dan adsorben (Atkins et al., 2023). Adsorpsi jenis ini umumnya terjadi pada suhu rendah, tidak spesifik terhadap jenis adsorben, serta dapat membentuk lapisan tunggal maupun berlapis-lapis di permukaan adsorben (Jamilah et al., 2024).</li>
+        <li><strong>Adsorpsi Kimia (Chemisorption):</strong> Melibatkan pembentukan ikatan kimia antara adsorbat dan adsorben, sehingga bersifat irreversibel (Alaqarbeh, 2021). Energi ikatan yang dilepaskan jauh lebih besar, sekitar 200 kJ/mol, dan proses ini umumnya bersifat eksotermis. Adsorpsi kimia biasanya menghasilkan lapisan tunggal (monolayer) yang menempel kuat pada permukaan (Jamilah et al., 2024).</li>
+      </ul>
+      <div style="text-align:center;margin:20px 0;">
+        <img src="gambar1.jpg" alt="Ilustrasi Adsorpsi" style="max-width:100%;height:auto;border-radius:8px;box-shadow:0 4px 8px rgba(0,0,0,0.1);margin-bottom:10px;">
+        <br><small><i>Gambar 1. Ilustrasi interaksi antara permukaan adsorben dan adsorbat pada proses adsorpsi fisik dan adsorpsi kimia (Jamilah et al., 2024)</i></small>
+      </div>
+
+      <h3 style="margin-top:25px;">3. Karakteristik &amp; Faktor yang Mempengaruhi Adsorpsi</h3>
+      <p>Efisiensi adsorpsi pada fase cair dipengaruhi oleh beberapa parameter, di antaranya:</p>
+      <div style="text-align:center;margin:20px 0;">
+        <img src="gambar2.jpg" alt="Grafik/Ilustrasi Kedua" style="max-width:100%;height:auto;border-radius:8px;box-shadow:0 4px 8px rgba(0,0,0,0.1);margin-bottom:10px;">
+        <br><small><i>Gambar 2. Penjelasan atau keterangan untuk gambar kedua Anda diletakkan di sini.</i></small>
+      </div>
+      <p><strong>a. Pengaruh Konsentrasi Awal Adsorbat</strong><br>
+      Konsentrasi awal adsorbat sangat memengaruhi efisiensi dan kapasitas adsorpsi karena menentukan jumlah molekul yang dapat terikat pada keadaan setimbang. Umumnya, efisiensi penghilangan menurun saat konsentrasi awal meningkat, disebabkan oleh kejenuhan situs aktif pada permukaan adsorben.</p>
+      <p><strong>b. Efek pH Larutan</strong><br>
+      pH merupakan parameter paling berpengaruh dalam proses adsorpsi karena menentukan muatan permukaan adsorben, tingkat ionisasi adsorbat, serta interaksi elektrostatik di antara keduanya. Pada kondisi asam, permukaan adsorben terprotonasi dan bermuatan positif, sedangkan pada kondisi basa, adsorben terdeprotonasi menjadi bermuatan negatif.</p>
+      <p><strong>c. Efek Dosis Adsorben</strong><br>
+      Jumlah adsorben menentukan rasio antara adsorben dan adsorbat. Peningkatan dosis adsorben umumnya meningkatkan efisiensi penghilangan karena lebih banyak situs aktif yang tersedia, tetapi kapasitas adsorpsi per satuan massa (q<sub>e</sub>) dapat menurun akibat ketidakterisian penuh situs aktif.</p>
+      <p><strong>d. Efek Ukuran Partikel Adsorben</strong><br>
+      Ukuran partikel berpengaruh besar terhadap luas permukaan spesifik (SSA). Partikel berukuran kecil memiliki luas permukaan dan jumlah situs aktif lebih besar, sehingga meningkatkan efisiensi dan laju adsorpsi.</p>
+      <p><strong>e. Efek Temperatur Larutan</strong><br>
+      Suhu berperan penting dalam menentukan energi kinetik, aktivitas permukaan, dan kestabilan adsorben. Pada <em>chemisorption</em>, efisiensi meningkat seiring kenaikan suhu, sedangkan pada <em>physisorption</em>, suhu tinggi justru menurunkan efisiensi karena melemahkan ikatan adsorbat–adsorben.</p>
+      <p><strong>f. Kecepatan Pengadukan &amp; Waktu Kontak</strong><br>
+      Kecepatan pengadukan mempercepat difusi ion ke permukaan adsorben. Sementara waktu kontak memengaruhi efisiensi; peningkatan waktu kontak mengurangi hambatan perpindahan massa, namun kontak yang terlalu lama justru dapat menyebabkan desorpsi.</p>
+
+      <h3 style="margin-top:25px;">4. Isoterm Adsorpsi</h3>
+      <p>Karakteristik dan mekanisme penyerapan ion Fe(III) dapat dianalisis menggunakan model isoterm Langmuir dan Freundlich. Melalui fitting data eksperimen, diperoleh parameter penting seperti kapasitas maksimum adsorpsi (q<sub>max</sub>), konstanta Langmuir (K<sub>L</sub>), dan parameter Freundlich (K<sub>f</sub> dan n).</p>
+      <p><strong>A. Model Isoterm Langmuir</strong><br>
+      Menggambarkan proses adsorpsi pada permukaan adsorben yang homogen, membentuk lapisan tunggal (<em>monolayer</em>). Semua situs aktif di permukaan dianggap memiliki energi yang sama.</p>
+      <div style="background-color:#fcfcfc;padding:15px;border-left:4px solid #007bff;margin:10px 0;font-family:'Times New Roman',Times,serif;font-size:1.1rem;overflow-x:auto;">
+        <i>Bentuk Non-linear:</i><br>
+        q<sub>e</sub> = (q<sub>max</sub> · K<sub>L</sub> · C<sub>e</sub>) / (1 + K<sub>L</sub> · C<sub>e</sub>) &nbsp; ... (1)<br><br>
+        <i>Bentuk Linear:</i><br>
+        C<sub>e</sub>/q<sub>e</sub> = (1/q<sub>max</sub>) · C<sub>e</sub> + 1/(q<sub>max</sub> · K<sub>L</sub>) &nbsp; ... (2)<br>
+        <span style="color:#555;font-size:0.9rem;">(y = mx + c)</span>
+      </div>
+      <p>Model ini dianalisis dengan memplot grafik C<sub>e</sub>/q<sub>e</sub> terhadap C<sub>e</sub>.</p>
+      <p><strong>B. Model Isoterm Freundlich</strong><br>
+      Menggambarkan adsorpsi pada permukaan adsorben yang tidak seragam (heterogen), memungkinkan pembentukan multilayer.</p>
+      <div style="background-color:#fcfcfc;padding:15px;border-left:4px solid #28a745;margin:10px 0;font-family:'Times New Roman',Times,serif;font-size:1.1rem;overflow-x:auto;">
+        <i>Bentuk Non-linear:</i><br>
+        q<sub>e</sub> = K<sub>f</sub> · C<sub>e</sub><sup>1/n<sub>f</sub></sup> &nbsp; ... (3)<br><br>
+        <i>Bentuk Linear:</i><br>
+        Log q<sub>e</sub> = (1/n<sub>f</sub>) · Log C<sub>e</sub> + Log K<sub>f</sub> &nbsp; ... (4)<br>
+        <span style="color:#555;font-size:0.9rem;">(y = mx + c)</span>
+      </div>
+      <p>Model Freundlich dianalisis dengan memplot log q<sub>e</sub> terhadap log C<sub>e</sub>.</p>
+
+      <h3 style="margin-top:25px;">5. Keunggulan Pelepah Sawit dalam Praktik Green Chemistry</h3>
+      <p>Pelepah kelapa sawit (Oil Palm Frond/OPF) merupakan salah satu limbah biomassa terbesar dari perkebunan kelapa sawit yang jumlahnya dapat mencapai ratusan juta ton per tahun. Di Sumatera Selatan, kelapa sawit adalah komoditas utama, sehingga pelepah sawit sangat mudah diperoleh, termasuk di area kampus Universitas Sriwijaya (Unsri).</p>
+      <div style="text-align:center;margin:20px 0;">
+        <img src="gambar3.jpg" alt="Grafik/Ilustrasi Ketiga" style="max-width:100%;height:auto;border-radius:8px;box-shadow:0 4px 8px rgba(0,0,0,0.1);margin-bottom:10px;">
+        <br><small><i>Gambar 3. Penjelasan atau keterangan untuk gambar ketiga Anda diletakkan di sini.</i></small>
+      </div>
+      <p>Dari perspektif <em>green chemistry</em>, pemanfaatan OPF menjadi arang aktif sejalan dengan prinsip pengurangan limbah dan pemanfaatan sumber daya terbarukan. Penggunaan OPF dapat mengurangi ketergantungan pada bahan baku lain seperti kayu atau batubara, sekaligus memberikan nilai tambah pada limbah yang selama ini kurang termanfaatkan.</p>
+      <p>Selain manfaat teknis dan lingkungan, pemanfaatan OPF untuk arang aktif juga membawa dampak sosial-ekonomi yang signifikan. Pengolahan OPF dapat membuka peluang usaha baru di daerah penghasil sawit, termasuk sekitar kampus Unsri, serta menciptakan lapangan kerja dan meningkatkan pendapatan masyarakat lokal. Pendekatan ini mendukung ekonomi sirkular dengan mengubah limbah menjadi produk bernilai tinggi sekaligus membantu pengurangan emisi karbon.</p>
+
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 7 — ALAT & BAHAN -->
+<div class="page" id="page-7">
+  <div class="page-header"><h2 id="pg7_header">🔬 Alat &amp; Bahan</h2><div class="pg-num">7</div></div>
+  <div class="page-content">
+    <p id="pg7_intro"></p>
+    <div class="sim-grid" style="grid-template-columns:1fr;">
+      <div class="sim-card" style="display:flex;align-items:center;gap:20px;text-align:left;">
+        <span class="sim-icon">🧪</span>
+        <div style="flex:1;"><h4 id="pg7_sim_title"></h4><p id="pg7_sim_desc"></p><a class="btn-sim" href="simulasi_alat.html" target="_blank" id="pg7_sim_btn">🖥️ Buka Simulasi</a></div>
+      </div>
+    </div>
+    <hr class="rule">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+      <div>
+        <h3 id="pg7_alat_title">🔧 Daftar Alat</h3>
+        <ul>
+          <li id="alat_1"></li><li id="alat_2"></li><li id="alat_3"></li><li id="alat_4"></li>
+          <li id="alat_5"></li><li id="alat_6"></li><li id="alat_7"></li><li id="alat_8"></li>
+          <li id="alat_9"></li><li id="alat_10"></li><li id="alat_11"></li><li id="alat_12"></li>
+          <li id="alat_13"></li><li id="alat_14"></li><li id="alat_15"></li><li id="alat_16"></li>
+        </ul>
+      </div>
+      <div>
+        <h3 id="pg7_bahan_title">⚗️ Daftar Bahan</h3>
+        <ul>
+          <li id="bahan_1"></li><li id="bahan_2"></li><li id="bahan_3"></li><li id="bahan_4"></li>
+          <li id="bahan_5"></li><li id="bahan_6"></li><li id="bahan_7"></li>
+        </ul>
+      </div>
+    </div>
+    <div class="warning-box mt-16"><p id="pg7_warning"></p></div>
+  </div>
+</div>
+
+<!-- PAGE 8 — PROSEDUR KERJA -->
+<div class="page" id="page-8">
+  <div class="page-header"><h2 id="pg8_header">⚙️ Prosedur Kerja</h2><div class="pg-num">8</div></div>
+  <div class="page-content">
+    <p id="pg8_intro" style="margin-bottom:14px;font-size:0.88rem;color:var(--text-light);"></p>
+    <div class="section-label" id="pg8_label1">Tahap I</div>
+    <div class="proc-step"><div class="step-num">1</div><div class="step-body"><h4 id="pg8_s1_h"></h4><a class="btn-sim" href="sim_5_cari_pelepah.html" target="_blank" id="pg8_s1_btn"></a><p id="pg8_proc1" style="margin-top:8px;font-size:0.82rem;color:var(--text-mid);line-height:1.6;"></p></div></div>
+    <div class="proc-step"><div class="step-num">2</div><div class="step-body"><h4 id="pg8_s2_h"></h4><a class="btn-sim" href="sim_6_prep_pelepah.html" target="_blank" id="pg8_s2_btn"></a><p id="pg8_proc2" style="margin-top:8px;font-size:0.82rem;color:var(--text-mid);line-height:1.6;"></p></div></div>
+    <div class="section-label" id="pg8_label2" style="background:var(--green-mid);">Tahap II</div>
+    <div class="proc-step"><div class="step-num">3</div><div class="step-body"><h4 id="pg8_s3_h"></h4><a class="btn-sim" href="sim_9_karbonisasi.html" target="_blank" id="pg8_s3_btn"></a><p id="pg8_proc2b" style="margin-top:8px;font-size:0.82rem;color:var(--text-mid);line-height:1.6;"></p></div></div>
+    <div class="section-label" id="pg8_label3" style="background:#c9a84c;">Tahap III</div>
+    <div class="proc-step"><div class="step-num">4</div><div class="step-body"><h4 id="pg8_s4_h"></h4><a class="btn-sim" href="sim_7_larutan_jeruk.html" target="_blank" id="pg8_s4_btn"></a><p id="pg8_proc3" style="margin-top:8px;font-size:0.82rem;color:var(--text-mid);line-height:1.6;"></p></div></div>
+    <div class="proc-step"><div class="step-num">5</div><div class="step-body"><h4 id="pg8_s5_h"></h4><a class="btn-sim" href="sim_8_titrasi.html" target="_blank" id="pg8_s5_btn"></a><p id="pg8_proc4" style="margin-top:8px;font-size:0.82rem;color:var(--text-mid);line-height:1.6;"></p></div></div>
+    <div class="section-label" id="pg8_label4" style="background:#d35400;">Tahap IV</div>
+    <div class="proc-step"><div class="step-num">6</div><div class="step-body"><h4 id="pg8_s6_h"></h4><p id="pg8_s6_p"></p><a class="btn-sim" href="simulasi_adsorpsi.html" target="_blank" id="pg8_s6_btn"></a><p id="pg8_proc5" style="margin-top:8px;font-size:0.82rem;color:var(--text-mid);line-height:1.6;"></p></div></div>
+    <div class="instruction-banner" id="pg8_banner"></div>
+  </div>
+</div>
+
+<!-- ======================================================
+     PAGE 9 — HASIL PENGAMATAN (DIPERBARUI)
+     Kolom baru: No | Waktu | ΔV rata-rata | Cₑ (M) | Status
+====================================================== -->
+<div class="page" id="page-9">
+  <div class="page-header"><h2 id="pg9_header">📊 Hasil Pengamatan</h2><div class="pg-num">9</div></div>
+  <div class="page-content">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px;">
+      <div>
+        <h3 id="pg9_table_title" style="margin:0 0 4px;">Tabel Data Titrasi &amp; Konsentrasi Asam Sitrat</h3>
+        <p id="pg9_table_desc" style="font-size:0.82rem;margin:0;color:var(--text-light);"></p>
+      </div>
+      <button class="btn-refresh" id="pg9_btn_refresh" onclick="loadDataFromStorage()">🔄 Refresh Data</button>
+    </div>
+    <div id="data-status" class="status-badge warn"></div>
+    <div class="data-table-wrap">
+      <table class="data-table" id="obs-table">
+        <thead>
+          <tr>
+            <th id="pg9_th0">No.</th>
+            <th id="pg9_th1">Waktu Kontak (menit)</th>
+            <th id="pg9_th2">ΔV NaOH rata-rata (mL)</th>
+            <th id="pg9_th3">Konsentrasi Asam Sitrat, Cₑ (M)</th>
+            <th id="pg9_th4">Status</th>
+          </tr>
+        </thead>
+        <tbody id="obs-tbody"></tbody>
+      </table>
+    </div>
+
+    <!-- Kotak rumus -->
+    <div class="param-formula-box" style="margin-top:12px;">
+      <strong id="pg9_formula_title">📐 Rumus Perhitungan Cₑ:</strong><br>
+      <span style="font-family:'Times New Roman',serif;font-size:1rem;">
+        C<sub>e</sub> (M) = (C<sub>NaOH</sub> × ΔV) / (3 × V<sub>tit</sub>)
+        &nbsp;=&nbsp; (0,1 M × ΔV<sub>mL</sub>) / (3 × 2,5 mL)
+        &nbsp;=&nbsp; ΔV / 75
+      </span><br>
+      <span style="font-family:'Times New Roman',serif;font-size:1rem;">
+        C<sub>e</sub> (mg/L) = C<sub>e</sub>(M) × MW<sub>citric</sub> × 1000
+        &nbsp;=&nbsp; C<sub>e</sub>(M) × 192,120
+      </span><br>
+      <small id="pg9_formula_note" style="color:var(--text-light);">Asam sitrat bersifat triprotik (H₃C₆H₅O₇ + 3NaOH → produk + 3H₂O) | BM = 192,12 g/mol | V<sub>titrasi efektif</sub> = 2,5 mL</small>
+    </div>
+
+    <div class="info-box mt-16">
+      <h4 id="pg9_info_title">📝 Keterangan</h4>
+      <p id="pg9_info_body"></p>
+    </div>
+    <hr class="rule">
+    <h3 id="pg9_manual_title">Input Manual (Opsional)</h3>
+    <p id="pg9_manual_desc" style="font-size:0.83rem;color:var(--text-light);margin-bottom:8px;"></p>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:8px;">
+      <div id="pg9_manual_th0" style="font-size:0.75rem;color:#fff;background:var(--green-dark);padding:5px 8px;border-radius:4px;text-align:center;">Waktu (mnt)</div>
+      <div id="pg9_manual_th1" style="font-size:0.75rem;color:#fff;background:var(--green-dark);padding:5px 8px;border-radius:4px;text-align:center;">ΔV NaOH (mL)</div>
+      <div id="pg9_manual_th2" style="font-size:0.75rem;color:#fff;background:var(--green-dark);padding:5px 8px;border-radius:4px;text-align:center;">Cₑ (M) – otomatis</div>
+      <div id="pg9_manual_th3" style="font-size:0.75rem;color:#fff;background:var(--green-dark);padding:5px 8px;border-radius:4px;text-align:center;">Aksi</div>
+    </div>
+    <div id="manual-input-rows"></div>
+    <button class="btn-refresh" id="pg9_btn_reset" onclick="initManualRows()" style="margin-top:6px;font-size:0.8rem;">+ Reset Baris Input Manual</button>
+  </div>
+</div>
+
+<!-- ======================================================
+     PAGE 10 — PERHITUNGAN & FITTING (DIPERBARUI)
+     Parameter tetap, tidak perlu diinput lagi
+====================================================== -->
+<div class="page" id="page-10">
+  <div class="page-header"><h2 id="pg10_header">🧮 Perhitungan &amp; Fitting Isoterm</h2><div class="pg-num">10</div></div>
+  <div class="page-content">
+
+    <!-- A. PARAMETER TETAP -->
+    <h3 id="pg10_param_title">A. Parameter Percobaan (Tetap)</h3>
+    <p id="pg10_param_note" style="font-size:0.82rem;color:var(--text-light);margin-bottom:12px;"></p>
+    <div class="param-fixed-grid">
+      <div class="param-fixed-item">
+        <div class="param-label" id="param_lbl_c0">Konsentrasi Awal, C₀</div>
+        <div class="param-value">49.951,2 mg/L</div>
+        <div class="param-sub" id="param_sub_c0">= 0,260 M × 192.120 mg/mol &nbsp;|&nbsp; sari jeruk 10%, ΔV₀ = 19,50 mL</div>
+      </div>
+      <div class="param-fixed-item">
+        <div class="param-label" id="param_lbl_m">Massa Adsorben, m</div>
+        <div class="param-value">1,0 g</div>
+        <div class="param-sub" id="param_sub_m">Arang pelepah sawit per wadah adsorpsi</div>
+      </div>
+      <div class="param-fixed-item">
+        <div class="param-label" id="param_lbl_v">Volume Larutan Adsorpsi, V</div>
+        <div class="param-value">25 mL = 0,025 L</div>
+        <div class="param-sub" id="param_sub_v">Aliquot dari larutan jeruk 10% (10 mL jeruk + 90 mL air)</div>
+      </div>
+      <div class="param-fixed-item">
+        <div class="param-label" id="param_lbl_n">Konsentrasi NaOH Titran</div>
+        <div class="param-value">0,1 M</div>
+        <div class="param-sub" id="param_sub_n">Volume titrasi ideal ~0,75–19,50 mL → pembacaan akurat</div>
+      </div>
+    </div>
+
+    <!-- Kotak Rumus Utama -->
+    <div class="param-formula-box">
+      <strong id="pg10_formula_title">📐 Rumus Kunci:</strong><br>
+      <span style="font-family:'Times New Roman',serif;">
+        C<sub>e</sub> (mg/L) = [C<sub>NaOH</sub> × ΔV<sub>mL</sub> / (3 × 2,5)] × 192.120
+        &nbsp;=&nbsp; ΔV<sub>mL</sub> × 2.561,6
+      </span><br>
+      <span style="font-family:'Times New Roman',serif;">
+        q<sub>e</sub> (mg/g) = (C₀ − C<sub>e</sub>) × V / m
+        &nbsp;=&nbsp; (49.951,2 − C<sub>e</sub>) × 0,025 / 1,0
+      </span>
+    </div>
+
+    <!-- B. DATA Ce DAN qe -->
+    <h3 id="pg10_data_title" style="margin-top:4px;">B. Data Cₑ dan qₑ</h3>
+    <p id="pg10_data_desc" style="font-size:0.82rem;color:var(--text-light);margin-bottom:10px;"></p>
+    <div class="chart-input-grid">
+      <div class="cin-label" id="pg10_th_time">Waktu (mnt)</div>
+      <div class="cin-label" id="pg10_th_dv">ΔV (mL)</div>
+      <div class="cin-label" id="pg10_th_ce">Cₑ (mg/L)</div>
+      <div class="cin-label" id="pg10_th_qe">qₑ (mg/g)</div>
+      <div class="cin-label" id="pg10_th_act">Aksi</div>
+    </div>
+    <div id="calc-rows"></div>
+    <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;">
+      <button class="btn-calc" id="pg10_btn_auto" onclick="autoCalc()">⚡ Hitung Otomatis dari Simulasi</button>
+      <button class="btn-calc" id="pg10_btn_chart" onclick="generateCharts()" style="background:var(--green-dark);color:#fff;">📈 Buat Grafik Isoterm</button>
+    </div>
+    <div id="calc-results" style="margin-top:12px;"></div>
+    <hr class="rule">
+
+    <!-- C. GRAFIK -->
+    <h3 id="pg10_chart_title">C. Grafik Fitting Isoterm</h3>
+    <div class="charts-flex" id="charts-area">
+      <div class="chart-container">
+        <h4 id="pg10_langmuir_title" style="font-size:0.88rem;color:var(--green-dark);margin-bottom:8px;">📉 Isoterm Langmuir</h4>
+        <p id="pg10_langmuir_axis" style="font-size:0.75rem;color:var(--text-light);margin-bottom:6px;"></p>
+        <canvas id="langmuir-chart"></canvas>
+        <div class="reg-result" id="langmuir-reg">Grafik akan muncul setelah data dimasukkan.</div>
+      </div>
+      <div class="chart-container">
+        <h4 id="pg10_freundlich_title" style="font-size:0.88rem;color:var(--green-dark);margin-bottom:8px;">📈 Isoterm Freundlich</h4>
+        <p id="pg10_freundlich_axis" style="font-size:0.75rem;color:var(--text-light);margin-bottom:6px;"></p>
+        <canvas id="freundlich-chart"></canvas>
+        <div class="reg-result" id="freundlich-reg">Grafik akan muncul setelah data dimasukkan.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 11 — PEMBAHASAN -->
+<div class="page" id="page-11">
+  <div class="page-header"><h2 id="pg11_header">✍️ Pembahasan</h2><div class="pg-num">11</div></div>
+  <div class="page-content">
+    <div class="info-box" style="margin-bottom:16px;"><h4 id="pg11_info_title"></h4><p id="pg11_info_body"></p></div>
+    <div class="essay-q">
+      <h4 id="pg11_q1_num">Soal 1.</h4>
+      <p id="pg11_q1_text"></p>
+      <textarea id="essay-1" placeholder="Tulis jawaban Anda di sini..." oninput="countWords(this,'wc-1')"></textarea>
+      <div class="wc-row"><span class="wc-display" id="wc-1">0 / 200 kata</span></div>
+    </div>
+    <div class="essay-q">
+      <h4 id="pg11_q2_num">Soal 2.</h4>
+      <p id="pg11_q2_text"></p>
+      <textarea id="essay-2" placeholder="Tulis jawaban Anda di sini..." oninput="countWords(this,'wc-2')"></textarea>
+      <div class="wc-row"><span class="wc-display" id="wc-2">0 / 200 kata</span></div>
+    </div>
+    <div class="essay-q">
+      <h4 id="pg11_q3_num">Soal 3.</h4>
+      <p id="pg11_q3_text"></p>
+      <textarea id="essay-3" placeholder="Tulis jawaban Anda di sini..." oninput="countWords(this,'wc-3')"></textarea>
+      <div class="wc-row"><span class="wc-display" id="wc-3">0 / 200 kata</span></div>
+    </div>
+    <button class="btn-refresh" id="pg11_btn_save" onclick="saveEssays()">💾 Simpan Jawaban Essay</button>
+  </div>
+</div>
+
+<!-- PAGE 12 — KESIMPULAN -->
+<div class="page" id="page-12">
+  <div class="page-header"><h2 id="pg12_header">🏁 Kesimpulan &amp; Daftar Pustaka</h2><div class="pg-num">12</div></div>
+  <div class="page-content">
+    <h3 id="pg12_concl_title">✅ Kesimpulan</h3>
+    <div class="concl-box">
+      <textarea id="concl-text" placeholder="Tuliskan kesimpulan..." style="min-height:120px;" oninput="autoSave()"></textarea>
+    </div>
+    <hr class="rule">
+    <h3 id="pg12_ref_title">📚 Daftar Pustaka</h3>
+    <ul class="ref-list" style="padding-left:20px;">
+      <li style="text-align:justify;display:list-item;margin-bottom:15px;line-height:1.6;">Foo, K.Y., &amp; Hameed, B.H. (2010). Insights into the modeling of adsorption isotherm systems. <em>Chemical Engineering Journal, 156</em>(1), 2–10.</li>
+      <li style="text-align:justify;display:list-item;margin-bottom:15px;line-height:1.6;">Freundlich, H. (1907). Über die Adsorption in Lösungen. <em>Zeitschrift für Physikalische Chemie, 57</em>(1), 385–470.</li>
+      <li style="text-align:justify;display:list-item;margin-bottom:15px;line-height:1.6;">Yahya, M.A., Al-Qodah, Z., &amp; Ngah, C.W.Z. (2015). Agricultural bio-waste materials as potential sustainable precursors used in production of activated carbon. <em>Renewable and Sustainable Energy Reviews, 46</em>, 218–235.</li>
+      <li style="text-align:justify;display:list-item;margin-bottom:15px;line-height:1.6;">Zikri, R., et al. (2022). Adsorption of Fe(III) from peat water using activated carbon from oil palm frond. <em>Journal of Chemistry</em>.</li>
+    </ul>
+    <hr class="rule">
+    <div class="text-center" style="display:flex;flex-direction:column;gap:12px;align-items:center;">
+      <button class="btn-print" id="pg12_btn_print" onclick="printLKM()">🖨️ Cetak LKM ke PDF</button>
+      <a href="https://drive.google.com/drive/folders/1ae7ekAP3FAds1YQsAd7FR70-3YIDtN8c?usp=sharing" target="_blank" style="text-decoration:none;width:280px;padding:12px 24px;background:#1a73e8;color:white;border-radius:8px;font-weight:bold;display:flex;align-items:center;justify-content:center;gap:10px;font-family:sans-serif;font-size:14px;" onmouseover="this.style.background='#1557b0'" onmouseout="this.style.background='#1a73e8'">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="white"><path d="M7.71 3.5L1.15 15l3.43 6 6.55-11.5M9.73 15L6.3 21h13.06l3.34-6M18.73 15L12 3.5 5.27 15"/></svg>
+        <span id="pg12_btn_drive">Buka Folder Google Drive</span>
+      </a>
+      <p id="pg12_print_note" style="font-size:0.75rem;color:var(--text-light);margin-top:8px;line-height:1.4;max-width:400px;"></p>
+    </div>
+    <div class="info-box mt-16" id="identity-summary" style="border:1px solid #ddd;padding:15px;border-radius:8px;background:#f9f9f9;">
+      <h4 id="pg12_id_title" style="margin-top:0;">👤 Identitas Mahasiswa</h4>
+      <p id="identity-display">Belum diisi.</p>
+    </div>
+  </div>
+</div>
+
+</div><!-- end #book -->
+
+<div id="nav-bar">
+  <button class="nav-btn" id="btn-prev" onclick="changePage(-1)" disabled>◀ Sebelumnya</button>
+  <div id="page-indicator">
+    <span id="indicator-page">Hal. 1 / 12</span>
+    <span id="indicator-title" style="font-size:0.75rem;color:rgba(255,255,255,0.7);font-weight:normal;font-style:italic;">Cover</span>
+  </div>
+  <button class="nav-btn" id="btn-next" onclick="changePage(1)">Selanjutnya ▶</button>
+</div>
+</div>
+
+<!-- ============================================================
+     JAVASCRIPT UTAMA
+============================================================ -->
+<script>
+const TOTAL_PAGES = 12;
+let currentPage = 1;
+
+function getPageEl(n) { return document.getElementById('page-' + n); }
+
+function changePage(dir) {
+  const target = currentPage + dir;
+  if (target < 1 || target > TOTAL_PAGES) return;
+  const cur = getPageEl(currentPage), nxt = getPageEl(target);
+  if (dir > 0) {
+    nxt.classList.remove('prev','active'); cur.classList.add('prev');
+    void nxt.offsetWidth; nxt.classList.add('active');
+  } else {
+    cur.classList.remove('active','prev'); nxt.classList.remove('prev');
+    cur.style.transform = 'translateX(100%)'; void nxt.offsetWidth;
+    cur.classList.remove('active'); nxt.classList.add('active');
+    setTimeout(() => { cur.style.transform = ''; }, 460);
+  }
+  currentPage = target; updateNav(); onPageEnter(currentPage);
+}
+
+function goToPage(n) {
+  if (n === currentPage) return;
+  const dir = n > currentPage ? 1 : -1;
+  getPageEl(currentPage).classList.remove('active','prev');
+  getPageEl(currentPage).style.transform = dir > 0 ? 'translateX(-100%)' : 'translateX(100%)';
+  setTimeout(() => { getPageEl(currentPage).style.transform = ''; }, 0);
+  currentPage = n;
+  const dest = getPageEl(currentPage);
+  dest.classList.remove('prev'); dest.classList.add('active');
+  updateNav(); onPageEnter(currentPage);
+}
+
+function onPageEnter(n) {
+  if (n === 9)  loadDataFromStorage();
+  if (n === 10) initCalcRows();
+  if (n === 11) loadEssays();
+  if (n === 12) updateIdentitySummary();
+}
+
+function updateNav() {
+  const D = kamusBahasa[currentLang];
+  document.getElementById('btn-prev').disabled = (currentPage === 1);
+  document.getElementById('btn-next').disabled = (currentPage === TOTAL_PAGES);
+  const pageFmt = (D['indicator-page']||'Hal. {n} / 12').replace('{n}', currentPage);
+  document.getElementById('indicator-page').textContent = pageFmt;
+  const titles = D['page_titles'] || kamusBahasa['id']['page_titles'];
+  document.getElementById('indicator-title').textContent = titles[currentPage-1] || '';
+  if (D['btn-prev']) document.getElementById('btn-prev').textContent = D['btn-prev'];
+  if (D['btn-next']) document.getElementById('btn-next').textContent = D['btn-next'];
+}
+
+// Simpan identitas cover
+document.addEventListener('DOMContentLoaded', function() {
+  const inputKelompok = document.getElementById('input-kelompok');
+  const inputAnggota  = document.getElementById('input-anggota');
+  function simpanIdentitas() {
+    if (!inputKelompok||!inputAnggota) return;
+    localStorage.setItem('lkm_identity', JSON.stringify({ nim: inputKelompok.value.trim(), nama: inputAnggota.value.trim() }));
+  }
+  if (inputKelompok&&inputAnggota) {
+    inputKelompok.addEventListener('input', simpanIdentitas);
+    inputAnggota.addEventListener('input', simpanIdentitas);
+    const saved = JSON.parse(localStorage.getItem('lkm_identity')||'{}');
+    if (saved.nim)  inputKelompok.value = saved.nim;
+    if (saved.nama) inputAnggota.value  = saved.nama;
+  }
+});
+
+function updateIdentitySummary() {
+  const id = JSON.parse(localStorage.getItem('lkm_identity')||'{}');
+  const disp = document.getElementById('identity-display');
+  if (!disp) return;
+  const D = kamusBahasa[currentLang];
+  if (id && id.nama) {
+    disp.innerHTML = `<strong>${D['id_label_kelompok']||'Kelompok'}:</strong> ${id.nim||'-'} &nbsp;|&nbsp; <strong>${D['id_label_anggota']||'Anggota'}:</strong> ${id.nama}`;
+  } else {
+    disp.textContent = D['pg12_id_empty']||'Belum diisi.';
+  }
+}
+
+// ============================================================
+//  PAGE 9 — DATA PENGAMATAN (DIPERBARUI)
+//  Kolom: No | Waktu | ΔV rata-rata | Cₑ (M) | Status
+// ============================================================
+const TIME_POINTS = [15, 30, 45, 60];
+
+function loadDataFromStorage() {
+  const raw  = localStorage.getItem('data_praktikum');
+  const data = raw ? JSON.parse(raw) : [];
+  const tbody  = document.getElementById('obs-tbody');
+  const status = document.getElementById('data-status');
+  const D = kamusBahasa[currentLang];
+  if (!tbody) return;
+  tbody.innerHTML = '';
+  let filled = 0;
+  TIME_POINTS.forEach((t, i) => {
+    const d = data.find(x => x.t === t);
+    const tr = document.createElement('tr');
+    if (d) {
+      // Hitung ΔV (mungkin sudah tersimpan langsung, atau hitung dari v1/v2)
+      let dv;
+      if (d.dv !== undefined) {
+        dv = parseFloat(d.dv);
+      } else {
+        dv = parseFloat(d.v2) - parseFloat(d.v1);
+      }
+      const Ce_M = calcCe_M(dv);
+      tr.innerHTML = `
+        <td>${i+1}</td>
+        <td><strong>${t}</strong></td>
+        <td><strong>${dv.toFixed(2)}</strong></td>
+        <td><strong>${Ce_M.toFixed(4)}</strong></td>
+        <td>${D['pg9_status_done']||'✅'}</td>`;
+      filled++;
+    } else {
+      tr.innerHTML = `
+        <td>${i+1}</td>
+        <td><strong>${t}</strong></td>
+        <td class="empty-cell">—</td>
+        <td class="empty-cell">—</td>
+        <td>${D['pg9_status_pend']||'⏳'}</td>`;
+    }
+    tbody.appendChild(tr);
+  });
+  if (status) {
+    if (filled===4) {
+      status.className = 'status-badge ok';
+      status.textContent = (D['pg9_data_ok']||'').replace('{n}', filled);
+    } else if (filled>0) {
+      status.className = 'status-badge warn';
+      status.textContent = (D['pg9_data_partial']||'').replace('{n}', filled);
+    } else {
+      status.className = 'status-badge warn';
+      status.textContent = D['pg9_no_data']||'⚠️ Belum ada data.';
+    }
+  }
+}
+
+function initManualRows() {
+  const cont = document.getElementById('manual-input-rows');
+  if (!cont) return;
+  const D = kamusBahasa[currentLang];
+  cont.innerHTML = '';
+  TIME_POINTS.forEach(t => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:6px;';
+    row.innerHTML = `
+      <input type="number" value="${t}" disabled style="padding:6px;border:1px solid #ccc;border-radius:4px;text-align:center;background:#f5f5f5;font-size:0.82rem;">
+      <input type="number" step="0.01" placeholder="ΔV (mL)" id="man-dv-${t}" style="padding:6px;border:1px solid #ccc;border-radius:4px;text-align:center;font-size:0.82rem;" oninput="showManualCe(${t})">
+      <input type="number" readonly id="man-ce-${t}" placeholder="auto" style="padding:6px;border:1px solid #a8d8b8;border-radius:4px;text-align:center;font-size:0.82rem;background:#f0faf4;">
+      <button onclick="saveManualRow(${t})" style="background:var(--green-mid);color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:0.78rem;">${D['pg9_btn_save_row']||'Simpan'}</button>`;
+    cont.appendChild(row);
+  });
+}
+
+function showManualCe(t) {
+  const dvEl = document.getElementById(`man-dv-${t}`);
+  const ceEl = document.getElementById(`man-ce-${t}`);
+  if (!dvEl||!ceEl) return;
+  const dv = parseFloat(dvEl.value);
+  if (!isNaN(dv) && dv > 0) {
+    ceEl.value = calcCe_M(dv).toFixed(4);
+  } else { ceEl.value = ''; }
+}
+
+function saveManualRow(t) {
+  const dv = parseFloat(document.getElementById(`man-dv-${t}`)?.value);
+  if (isNaN(dv)||dv<=0) { alert('Isi ΔV terlebih dahulu.'); return; }
+  let data = JSON.parse(localStorage.getItem('data_praktikum')||'[]');
+  const idx = data.findIndex(d => d.t === t);
+  const entry = { t, dv }; // simpan ΔV langsung
+  if (idx>=0) data[idx]=entry; else data.push(entry);
+  localStorage.setItem('data_praktikum', JSON.stringify(data));
+  loadDataFromStorage();
+}
+
+// ============================================================
+//  PAGE 10 — KALKULATOR (DIPERBARUI)
+//  Semua parameter tetap, hanya perlu ΔV → auto Ce & qe
+// ============================================================
+let ceData = [], qeData = [];
+let langmuirChart = null, freundlichChart = null;
+
+function initCalcRows(forceRebuild) {
+  const cont = document.getElementById('calc-rows');
+  if (!cont) return;
+  if (!forceRebuild && cont.children.length > 0) return;
+  const D = kamusBahasa[currentLang];
+  cont.innerHTML = '';
+  TIME_POINTS.forEach(t => {
+    const row = document.createElement('div');
+    row.className = 'chart-input-grid';
+    row.style.marginBottom = '6px';
+    row.innerHTML = `
+      <input type="number" value="${t}" disabled style="background:#f0f0f0;">
+      <input type="number" step="0.001" placeholder="ΔV" id="dv-${t}" oninput="liveCalcRow(${t})">
+      <input type="number" step="0.001" placeholder="auto" id="ce-${t}" readonly style="background:#f0faf4;border-color:#a8d8b8;">
+      <input type="number" step="0.001" placeholder="auto" id="qe-${t}" readonly style="background:#f0faf4;border-color:#a8d8b8;">
+      <button onclick="calcRow(${t})" style="background:var(--green-mid);color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:0.75rem;padding:4px;">${D['pg10_btn_calc_row']||'Hitung'}</button>`;
+    cont.appendChild(row);
+  });
+}
+
+// Live preview saat mengetik ΔV
+function liveCalcRow(t) {
+  const dv = parseFloat(document.getElementById(`dv-${t}`)?.value);
+  if (isNaN(dv)||dv<=0) {
+    const ceEl = document.getElementById(`ce-${t}`);
+    const qeEl = document.getElementById(`qe-${t}`);
+    if (ceEl) ceEl.value = '';
+    if (qeEl) qeEl.value = '';
+    return;
+  }
+  const Ce = calcCe_mgL(dv);
+  const qe = calcQe(Ce);
+  const ceEl = document.getElementById(`ce-${t}`);
+  const qeEl = document.getElementById(`qe-${t}`);
+  if (ceEl) ceEl.value = Ce.toFixed(2);
+  if (qeEl) qeEl.value = qe.toFixed(4);
+}
+
+function calcRow(t) {
+  const D = kamusBahasa[currentLang];
+  const dv = parseFloat(document.getElementById(`dv-${t}`)?.value);
+  if (isNaN(dv)||dv<=0) { alert(D['pg10_alert_dv']||'Isi ΔV.'); return; }
+  const Ce = calcCe_mgL(dv);
+  const qe = calcQe(Ce);
+  document.getElementById(`ce-${t}`).value = Ce.toFixed(2);
+  document.getElementById(`qe-${t}`).value = qe.toFixed(4);
+}
+
+function autoCalc() {
+  const D = kamusBahasa[currentLang];
+  const raw = localStorage.getItem('data_praktikum');
+  if (!raw) { alert(D['pg10_alert_no_data']||'No data.'); return; }
+  const data = JSON.parse(raw);
+  let filled = 0;
+  TIME_POINTS.forEach(t => {
+    const d = data.find(x => x.t === t);
+    if (!d) return;
+    // Ambil ΔV (bisa dari d.dv atau d.v2-d.v1)
+    let dv;
+    if (d.dv !== undefined) {
+      dv = parseFloat(d.dv);
+    } else if (d.v1 !== undefined && d.v2 !== undefined) {
+      dv = parseFloat(d.v2) - parseFloat(d.v1);
+    } else { return; }
+    const Ce = calcCe_mgL(dv);
+    const qe = calcQe(Ce);
+    const dvEl = document.getElementById(`dv-${t}`);
+    const ceEl = document.getElementById(`ce-${t}`);
+    const qeEl = document.getElementById(`qe-${t}`);
+    if (dvEl) dvEl.value = dv.toFixed(2);
+    if (ceEl) ceEl.value = Ce.toFixed(2);
+    if (qeEl) qeEl.value = qe.toFixed(4);
+    filled++;
+  });
+  if (filled > 0) alert(D['pg10_alert_done']||'Selesai!');
+  else alert(D['pg10_alert_no_data']||'No data.');
+}
+
+function generateCharts() {
+  const D = kamusBahasa[currentLang];
+  ceData = []; qeData = [];
+  TIME_POINTS.forEach(t => {
+    const ce = parseFloat(document.getElementById(`ce-${t}`)?.value);
+    const qe = parseFloat(document.getElementById(`qe-${t}`)?.value);
+    if (!isNaN(ce)&&!isNaN(qe)&&ce>0&&qe>0) { ceData.push(ce); qeData.push(qe); }
+  });
+  if (ceData.length < 2) { alert(D['pg10_alert_min']||'Perlu ≥2 data.'); return; }
+  buildLangmuirChart();
+  buildFreundlichChart();
+}
+
+function linReg(xs, ys) {
+  const n=xs.length, sumX=xs.reduce((a,b)=>a+b,0), sumY=ys.reduce((a,b)=>a+b,0);
+  const sumXY=xs.reduce((a,b,i)=>a+b*ys[i],0), sumX2=xs.reduce((a,b)=>a+b*b,0);
+  const m=(n*sumXY-sumX*sumY)/(n*sumX2-sumX*sumX), b=(sumY-m*sumX)/n;
+  const yMean=sumY/n, ssTot=ys.reduce((a,y)=>a+(y-yMean)**2,0), ssRes=xs.reduce((a,x,i)=>a+(ys[i]-(m*x+b))**2,0);
+  return { m, b, r2: Math.max(0, 1-ssRes/ssTot) };
+}
+
+function buildLangmuirChart() {
+  const D = kamusBahasa[currentLang];
+  const xs = ceData, ys = ceData.map((ce,i)=>ce/qeData[i]);
+  const { m, b, r2 } = linReg(xs, ys);
+  const trendLine = [{ x:Math.min(...xs)*0.8, y:m*Math.min(...xs)*0.8+b }, { x:Math.max(...xs)*1.1, y:m*Math.max(...xs)*1.1+b }];
+  if (langmuirChart) langmuirChart.destroy();
+  const ctx = document.getElementById('langmuir-chart').getContext('2d');
+  langmuirChart = new Chart(ctx, {
+    data: { datasets: [
+      { type:'scatter', label:'Data Cₑ/qₑ vs Cₑ', data:xs.map((x,i)=>({x,y:ys[i]})), backgroundColor:'#1a4731', pointRadius:7 },
+      { type:'line', label:`R²=${r2.toFixed(4)}`, data:trendLine, borderColor:'#c9a84c', borderWidth:2, pointRadius:0, tension:0 }
+    ]},
+    options: { plugins:{legend:{labels:{font:{size:10}}}}, scales:{x:{title:{display:true,text:'Cₑ (mg/L)'}},y:{title:{display:true,text:'Cₑ/qₑ (g/L)'}}} }
+  });
+  const qm=1/m, KL=m/b;
+  document.getElementById('langmuir-reg').innerHTML =
+    `<strong>${D['pg10_lang_eq']||'Persamaan'}:</strong> y = ${m.toFixed(6)}x + ${b.toFixed(6)}<br>` +
+    `<strong>R² = ${r2.toFixed(4)}</strong><br>` +
+    `q<sub>max</sub> = ${qm.toFixed(4)} mg/g &nbsp;|&nbsp; K<sub>L</sub> = ${KL.toFixed(6)} L/mg`;
+}
+
+function buildFreundlichChart() {
+  const D = kamusBahasa[currentLang];
+  const xs = ceData.map(c=>Math.log10(c)), ys = qeData.map(q=>Math.log10(q));
+  const { m, b, r2 } = linReg(xs, ys);
+  const trendLine = [{ x:Math.min(...xs)-0.1, y:m*(Math.min(...xs)-0.1)+b }, { x:Math.max(...xs)+0.1, y:m*(Math.max(...xs)+0.1)+b }];
+  if (freundlichChart) freundlichChart.destroy();
+  const ctx = document.getElementById('freundlich-chart').getContext('2d');
+  freundlichChart = new Chart(ctx, {
+    data: { datasets: [
+      { type:'scatter', label:'Data log qₑ vs log Cₑ', data:xs.map((x,i)=>({x,y:ys[i]})), backgroundColor:'#2d7a50', pointRadius:7 },
+      { type:'line', label:`R²=${r2.toFixed(4)}`, data:trendLine, borderColor:'#c9a84c', borderWidth:2, pointRadius:0, tension:0 }
+    ]},
+    options: { plugins:{legend:{labels:{font:{size:10}}}}, scales:{x:{title:{display:true,text:'log Cₑ'}},y:{title:{display:true,text:'log qₑ'}}} }
+  });
+  const Kf=Math.pow(10,b), n_inv=m;
+  document.getElementById('freundlich-reg').innerHTML =
+    `<strong>${D['pg10_frnd_eq']||'Persamaan'}:</strong> y = ${m.toFixed(5)}x + ${b.toFixed(5)}<br>` +
+    `<strong>R² = ${r2.toFixed(4)}</strong><br>` +
+    `K<sub>f</sub> = ${Kf.toFixed(4)} &nbsp;|&nbsp; 1/n = ${n_inv.toFixed(4)} &nbsp;|&nbsp; n = ${(1/n_inv).toFixed(4)}`;
+}
+
+// ============================================================
+//  PAGE 11 — ESSAY
+// ============================================================
+function refreshWcDisplays() {
+  const D = kamusBahasa[currentLang];
+  ['1','2','3'].forEach(n => {
+    const ta = document.getElementById(`essay-${n}`);
+    const wc = document.getElementById(`wc-${n}`);
+    if (!wc) return;
+    if (ta && ta.value.trim()) { countWords(ta, `wc-${n}`); }
+    else { wc.textContent = D[`wc-${n}`] || (D['wc_unit']==='words'?'0 / 200 words':'0 / 200 kata'); }
+  });
+}
+
+function countWords(el, wcId) {
+  const D = kamusBahasa[currentLang];
+  const unit = D['wc_unit']||'kata';
+  const words = el.value.trim().split(/\s+/).filter(w=>w.length>0);
+  const count = el.value.trim()==='' ? 0 : words.length;
+  const display = document.getElementById(wcId);
+  if (!display) return;
+  if (count > 200) {
+    el.value = words.slice(0,200).join(' ');
+    display.textContent = D['pg11_wc_max']||`200 / 200 ${unit}`;
+    display.classList.add('warn');
+  } else {
+    display.textContent = `${count} / 200 ${unit}`;
+    display.classList.remove('warn');
+  }
+  autoSave();
+}
+
+function saveEssays() {
+  const D = kamusBahasa[currentLang];
+  localStorage.setItem('lkm_essays', JSON.stringify({
+    e1: document.getElementById('essay-1').value,
+    e2: document.getElementById('essay-2').value,
+    e3: document.getElementById('essay-3').value
+  }));
+  alert(D['pg11_alert_saved']||'✅ Tersimpan!');
+}
+
+function loadEssays() {
+  const raw = localStorage.getItem('lkm_essays');
+  if (!raw) return;
+  const e = JSON.parse(raw);
+  ['1','2','3'].forEach(n => {
+    const el = document.getElementById(`essay-${n}`);
+    if (el && e[`e${n}`]) { el.value = e[`e${n}`]; countWords(el, `wc-${n}`); }
+  });
+}
+
+function autoSave() {
+  const concl = document.getElementById('concl-text');
+  if (concl) localStorage.setItem('lkm_concl', concl.value);
+}
+
+function loadConcl() {
+  const v = localStorage.getItem('lkm_concl');
+  const el = document.getElementById('concl-text');
+  if (v && el) el.value = v;
+  if (el) el.addEventListener('input', autoSave);
+}
+
+function printLKM() {
+  const D = kamusBahasa[currentLang];
+  saveEssays(); autoSave();
+  const id = JSON.parse(localStorage.getItem('lkm_identity')||'{}');
+  if (!id.nim && !id.nama) { alert(D['pg12_alert_no_id']||'Isi identitas dulu.'); return; }
+  window.print();
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  loadDataFromStorage();
+  loadConcl();
+  initManualRows();
+  initCalcRows();
+  updateNav();
+});
+</script>
+</body>
+</html>

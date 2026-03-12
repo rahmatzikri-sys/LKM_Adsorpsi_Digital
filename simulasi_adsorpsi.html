@@ -1,0 +1,1097 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulasi Lab: Adsorpsi & Titrasi</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+/* ═══════════════════════════════════════════════════
+   CSS VARIABLES — semua posisi/ukuran bisa diubah
+   dari panel Layout Settings
+═══════════════════════════════════════════════════ */
+:root {
+    /* ── Gambar ── */
+    --img-neraca:          url('neraca_digital.png');
+    --img-kaca-arloji:     url('kaca_arloji_kosong.png');
+    --img-kaca-arloji-isi: url('kaca_arloji_arang.png');
+    --img-spatula:         url('spatula.png');
+    --img-hotplate:        url('hotplate_stirrer.png');
+    --img-magnet:          url('magnetic_bar.png');
+    --img-erlenmeyer-isi:  url('erlenmeyer_jeruk.png');
+    --img-erlenmeyer-mix:  url('erlenmeyer_arang_jeruk.png');
+
+    /* ── Scene 1: Neraca ── */
+    --neraca-w:        300px;
+    --neraca-h:        220px;
+    --arloji-left:     45%;
+    --arloji-bottom:   110px;
+    --arloji-w:        80px;
+    --arloji-h:        125px;
+    --lcd-left:        30%;
+    --lcd-bottom:      58px;
+    --spatula-top:     20%;
+    --spatula-right:   35%;
+    --spatula-w:       120px;   /* ← ukuran spatula */
+    --spatula-h:       140px;    /* ← ubah sesuai gambar Anda */
+
+    /* ── Scene 2: Hotplate ── */
+    --hotplate-w:      350px;
+    --hotplate-h:      250px;
+    --flask-bottom:    170px;
+    --magnet-bottom:   15px;
+    --magnet-w:        30px;    /* ← ubah lebar magnetic bar */
+    --magnet-h:        25px;     /* ← ubah tinggi magnetic bar */
+    --timer-top:       60%;
+    --timer-left:      50%;
+    --btn-start-top:   85%;
+    --btn-start-left:  50%;
+    --knob-temp-top:   85%;
+    --knob-temp-left:  32%;
+    --knob-rpm-top:    85%;
+    --knob-rpm-left:   70%;
+
+    /* ── Scene 3: Titrasi ── */
+    --t2-color-naoh:  rgba(210,235,255,0.92);
+    --t2-color-jeruk: rgba(255,170,0,0.65);
+    --t2-color-pink:  rgba(255,105,180,0.78);
+    --t2-color-over:  rgba(180,0,120,0.9);
+    --t2-img-erl: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 140'%3E%3Cpath d='M40,25 L60,25 L60,50 L95,125 A10,10 0 0,1 85,140 L15,140 A10,10 0 0,1 5,125 L40,50 Z' fill='rgba(255,255,255,0.15)' stroke='rgba(255,255,255,0.8)' stroke-width='3' stroke-linejoin='round'/%3E%3Cpath d='M35,15 L65,15 A5,5 0 0,1 70,20 L70,25 L30,25 L30,20 A5,5 0 0,1 35,15 Z' fill='rgba(255,255,255,0.5)' stroke='rgba(255,255,255,0.8)' stroke-width='2'/%3E%3C/svg%3E");
+    --t2-img-pip: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 100'%3E%3Cpath d='M8,20 L8,80 C8,90 11,95 12,100 C13,95 16,90 16,80 L16,20 Z' fill='rgba(255,255,255,0.6)' stroke='%23333' stroke-width='1'/%3E%3Cpath d='M4,0 L20,0 C22,0 24,2 24,5 L24,15 C24,18 22,20 20,20 L4,20 C2,20 0,18 0,15 L0,5 C0,2 2,0 4,0 Z' fill='%23e74c3c'/%3E%3C/svg%3E");
+}
+
+/* ═══════════════════════════════════════════════════
+   BODY & WRAPPER
+═══════════════════════════════════════════════════ */
+*{box-sizing:border-box;}
+body{
+    font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;
+    background-image:url('meja1.PNG');
+    background-size:cover; background-position:center; background-attachment:fixed;
+    user-select:none; overflow-x:hidden; margin:0;
+}
+.main-wrapper{
+    background:rgba(241,245,249,0.88);
+    backdrop-filter:blur(3px); min-height:100vh; padding:.5rem;
+}
+@media(min-width:768px){.main-wrapper{padding:1.5rem;}}
+
+/* ═══════════════════════════════════════════════════
+   SCENE BOX
+═══════════════════════════════════════════════════ */
+.scene-box{
+    height:550px; border-radius:12px; position:relative;
+    overflow:hidden; border:1px solid #e2e8f0;
+    box-shadow:0 4px 24px rgba(0,0,0,0.18);
+}
+
+/* ═══════════════════════════════════════════════════
+   BILINGUAL SWITCHER
+═══════════════════════════════════════════════════ */
+.lang-bar{display:flex;gap:6px;margin-bottom:8px;justify-content:flex-end;}
+.lang-btn{
+    padding:3px 10px; border-radius:4px; border:1px solid #94a3b8;
+    font-size:.75rem; font-weight:700; cursor:pointer;
+    background:transparent; color:#64748b; transition:all .15s;
+}
+.lang-btn.active{background:#1e293b;color:white;border-color:#1e293b;}
+
+/* ═══════════════════════════════════════════════════
+   LAYOUT SETTINGS MODAL
+═══════════════════════════════════════════════════ */
+/* ── Layout CSS variables diatur langsung di :root di atas ── */
+
+/* ═══════════════════════════════════════════════════
+   SHARED
+═══════════════════════════════════════════════════ */
+.lab-item{background-repeat:no-repeat;background-position:center;background-size:contain;transition:all .3s ease;position:absolute;}
+
+/* ═══════════════════════════════════════════════════
+   SCENE 1 — NERACA
+═══════════════════════════════════════════════════ */
+@keyframes scoop{
+    0%{transform:translate(50px,-100px) rotate(0deg);opacity:0;}
+    20%{opacity:1;transform:translate(0,-50px) rotate(-10deg);}
+    50%{transform:translate(-20px,0) rotate(-30deg);}
+    70%{transform:translate(-100px,-20px) rotate(-45deg);}
+    100%{transform:translate(-100px,-50px) rotate(0deg);opacity:0;}
+}
+.spatula-animate{
+    background-image:var(--img-spatula);background-size:contain;
+    background-repeat:no-repeat;background-position:center;background-color:transparent;
+    width:var(--spatula-w);height:var(--spatula-h);
+    animation:scoop 1.5s ease-in-out forwards;z-index:20;
+}
+.neraca{
+    width:var(--neraca-w);height:var(--neraca-h);
+    background-image:var(--img-neraca);background-size:contain;
+    background-repeat:no-repeat;background-position:center bottom;
+    background-color:transparent;position:relative;
+}
+.kaca-arloji{
+    width:var(--arloji-w);height:var(--arloji-h);
+    background-image:var(--img-kaca-arloji);background-size:contain;
+    background-repeat:no-repeat;background-position:center;position:absolute;
+    left:var(--arloji-left);bottom:var(--arloji-bottom);
+    transform:translateX(-50%);z-index:5;
+}
+.digital-lcd{
+    background:#bef264;padding:2px 8px;font-family:monospace;
+    font-size:1.1rem;color:#3f6212;border:2px solid #65a30d;
+    border-radius:4px;position:absolute;left:var(--lcd-left);
+    bottom:var(--lcd-bottom);z-index:10;
+}
+
+/* ═══════════════════════════════════════════════════
+   SCENE 2 — HOTPLATE
+═══════════════════════════════════════════════════ */
+@keyframes dropIn{
+    0%{top:-100px;opacity:1;transform:rotate(90deg);}
+    60%{top:80px;transform:rotate(90deg);}
+    80%{top:120px;transform:rotate(0deg);}
+    100%{top:auto;bottom:var(--magnet-bottom);opacity:1;transform:rotate(0deg);}
+}
+.magnet-drop{animation:dropIn .8s cubic-bezier(.6,-.28,.735,.045) forwards;}
+.erlenmeyer-mix{
+    width:140px;height:180px;
+    background-image:var(--img-erlenmeyer-isi);background-size:contain;
+    background-repeat:no-repeat;background-position:center bottom;
+    background-color:transparent;position:absolute;
+    bottom:var(--flask-bottom);left:50%;transform:translateX(-50%);z-index:10;
+}
+.erlenmeyer-mix.black{background-image:var(--img-erlenmeyer-mix);}
+.magnetic-bar{
+    width:var(--magnet-w);height:var(--magnet-h);background-image:var(--img-magnet);
+    background-size:contain;background-repeat:no-repeat;background-position:center;
+    background-color:transparent;border-radius:4px;
+    bottom:var(--magnet-bottom);left:50%;transform:translateX(-50%);opacity:0;
+}
+@keyframes spinBar{100%{transform:translateX(-50%) rotate(360deg);}}
+.spin{animation:spinBar .5s linear infinite;}
+.hotplate-container{
+    width:var(--hotplate-w);height:var(--hotplate-h);
+    background-image:var(--img-hotplate);background-size:contain;
+    background-repeat:no-repeat;background-position:center bottom;
+    background-color:transparent;position:absolute;
+    bottom:20px;left:50%;transform:translateX(-50%);z-index:1;
+}
+.hotplate-display{
+    background:rgba(15,23,42,.88);border:2px solid #334155;
+    color:#ef4444;font-family:'Courier New',monospace;
+    font-size:1.5rem;font-weight:bold;padding:5px 10px;
+    border-radius:4px;text-align:center;letter-spacing:2px;
+    position:absolute;
+    top:var(--timer-top);left:var(--timer-left);
+    transform:translate(-50%,-50%);
+}
+.switch-btn-container{position:absolute;top:var(--btn-start-top);left:var(--btn-start-left);transform:translate(-50%,-50%);}
+.switch-btn{
+    width:50px;height:25px;background:#dc2626;border:none;
+    border-radius:4px;color:white;font-size:10px;font-weight:bold;
+    cursor:pointer;box-shadow:0 4px 0 #991b1b;
+}
+.switch-btn:active{transform:translateY(2px);box-shadow:0 1px 0 #991b1b;}
+.switch-btn.on{background:#16a34a;box-shadow:0 4px 0 #15803d;}
+.knob-group-temp{position:absolute;top:var(--knob-temp-top);left:var(--knob-temp-left);transform:translate(-50%,-50%);}
+.knob-group-rpm {position:absolute;top:var(--knob-rpm-top); left:var(--knob-rpm-left); transform:translate(-50%,-50%);}
+.knob{
+    width:35px;height:35px;background:#475569;border-radius:50%;
+    border:2px solid #94a3b8;position:relative;cursor:pointer;
+    transition:transform .1s;box-shadow:2px 2px 5px rgba(0,0,0,.5);
+}
+.knob::after{content:'';position:absolute;top:4px;left:50%;width:3px;height:10px;background:white;transform:translateX(-50%);border-radius:2px;}
+
+/* ═══════════════════════════════════════════════════
+   SCENE 3 — TITRASI
+═══════════════════════════════════════════════════ */
+.t2-statif-base{position:absolute;left:10%;bottom:25px;width:140px;height:15px;background:linear-gradient(to bottom,#7f8c8d,#2c3e50);border-radius:5px 5px 2px 2px;z-index:1;box-shadow:0 5px 10px rgba(0,0,0,.3);}
+.t2-statif-rod{position:absolute;left:calc(10% + 65px);bottom:40px;width:12px;height:480px;background:linear-gradient(to right,#95a5a6,#ecf0f1 30%,#7f8c8d 80%,#34495e);border-radius:6px 6px 0 0;z-index:1;}
+.t2-klem{position:absolute;left:calc(10% + 70px);top:120px;width:80px;height:16px;background:linear-gradient(to bottom,#34495e,#2c3e50);border-radius:3px;z-index:2;}
+.t2-klem::after{content:'';position:absolute;right:-10px;top:-4px;width:24px;height:24px;background:#2c3e50;border-radius:50%;border:3px solid #7f8c8d;}
+.t2-buret-container{position:absolute;left:calc(10% + 145px);top:40px;width:30px;height:340px;z-index:3;display:flex;flex-direction:column;align-items:center;}
+.t2-buret-glass{width:100%;height:300px;background:rgba(255,255,255,.12);border:2px solid rgba(255,255,255,.6);border-left:2px solid rgba(255,255,255,.9);border-right:2px solid rgba(200,210,220,.8);border-radius:5px 5px 0 0;position:relative;overflow:hidden;box-shadow:inset -3px 0 8px rgba(0,0,0,.1),inset 5px 0 10px rgba(255,255,255,.5);}
+.t2-buret-marks{position:absolute;top:0;left:0;width:40%;height:100%;background:repeating-linear-gradient(to bottom,transparent,transparent 9px,rgba(255,255,255,.5) 9px,rgba(255,255,255,.5) 10px);z-index:3;pointer-events:none;}
+.t2-buret-marks::after{content:'';position:absolute;top:0;left:0;width:150%;height:100%;background:repeating-linear-gradient(to bottom,transparent,transparent 49px,rgba(255,255,255,.8) 49px,rgba(255,255,255,.8) 50px);}
+.t2-liquid-naoh{position:absolute;bottom:0;width:100%;height:0%;background:var(--t2-color-naoh);transition:height .08s linear;z-index:1;box-shadow:inset 0 5px 5px rgba(255,255,255,.5);}
+.t2-keran-container{width:12px;height:25px;background:rgba(200,210,220,.8);border-left:1px solid #fff;border-right:1px solid #aaa;position:relative;z-index:2;}
+.t2-keran{position:absolute;left:-10px;top:5px;width:32px;height:12px;background:linear-gradient(to bottom,#e74c3c,#c0392b);border-radius:6px;cursor:pointer;transition:transform .2s;box-shadow:0 2px 4px rgba(0,0,0,.2);}
+.t2-buret-tip{width:6px;height:20px;background:rgba(255,255,255,.3);border:1px solid rgba(255,255,255,.6);border-top:none;border-radius:0 0 3px 3px;}
+.t2-drop{position:absolute;left:calc(10% + 157px);top:382px;width:8px;height:12px;background:var(--t2-color-naoh);border-radius:50% 50% 40% 40%/60% 60% 30% 30%;opacity:0;pointer-events:none;z-index:4;}
+.t2-erlenmeyer-container{position:absolute;left:68%;bottom:25px;width:110px;height:150px;z-index:3;transform-origin:bottom center;filter:drop-shadow(0 10px 5px rgba(0,0,0,.2));transition:left 1.5s ease-in-out;}
+.t2-erlenmeyer-container.placed{left:calc(10% + 100px);}
+.t2-flask-shape{width:100%;height:100%;clip-path:polygon(35% 15%,65% 15%,65% 35%,95% 90%,85% 100%,15% 100%,5% 90%,35% 35%);position:relative;}
+.t2-flask-img{position:absolute;top:0;left:0;width:100%;height:100%;background-image:var(--t2-img-erl);background-size:contain;background-repeat:no-repeat;background-position:bottom;z-index:5;pointer-events:none;}
+.t2-liquid-mix{position:absolute;bottom:0;left:0;width:100%;height:20px;background:var(--t2-color-jeruk);transition:background-color .5s ease,height .15s ease;z-index:4;box-shadow:inset 0 3px 5px rgba(255,255,255,.4);}
+.t2-spill-visual{position:absolute;top:-10px;left:-15px;width:60px;height:0;background:rgba(200,230,255,.8);border-radius:10px;opacity:0;z-index:10;pointer-events:none;transition:height .2s,opacity .5s;}
+.t2-spill-visual.active{height:300px;opacity:1;}
+.t2-pipette-container{position:absolute;left:calc(10% + 125px);bottom:185px;width:30px;height:100px;background-image:var(--t2-img-pip);background-size:contain;background-repeat:no-repeat;opacity:0;z-index:10;transform:translateY(-50px) rotate(-15deg);transition:all .5s ease;}
+.t2-pipette-container.active{opacity:1;transform:translateY(0) rotate(-15deg);}
+.t2-pipette-drop{position:absolute;left:2px;bottom:-10px;width:8px;height:12px;background:rgba(255,255,255,.8);border-radius:50%;opacity:0;}
+@keyframes t2-drip{0%{transform:translateY(0);opacity:1;}100%{transform:translateY(135px);opacity:0;}}
+@keyframes t2-shake{0%,100%{transform:rotate(0);}25%{transform:rotate(-3deg);}75%{transform:rotate(3deg);}}
+@keyframes t2-pipDrip{0%{transform:translateY(0);opacity:1;}100%{transform:translateY(100px);opacity:0;}}
+.t2-anim-drip{animation:t2-drip .4s infinite linear;}
+.t2-anim-shake{animation:t2-shake .8s infinite ease-in-out;}
+.t2-anim-pip-drip{animation:t2-pipDrip .5s ease-in forwards;}
+
+/* ═══════════════════════════════════════════════════
+   TITRATION SIDEBAR PANEL
+═══════════════════════════════════════════════════ */
+#titration-panel button{background:#3498db;color:white;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;font-weight:bold;transition:all .2s;width:100%;margin-bottom:4px;font-size:.78rem;}
+#titration-panel button:hover{filter:brightness(1.1);}
+#titration-panel button:disabled{background:#bdc3c7;cursor:not-allowed;}
+#titration-panel button.btn-orange{background:#e67e22;}
+#titration-panel button.btn-red{background:#e74c3c;}
+#titration-panel button.btn-green{background:#27ae60;}
+#titration-panel button.btn-purple{background:#8e44ad;}
+.t2-monitor{font-family:'Courier New',monospace;background:#111;color:#00ff88;padding:6px 10px;border-radius:4px;margin-bottom:7px;font-size:.75rem;text-align:center;line-height:1.75;}
+#titration-panel table{width:100%;border-collapse:collapse;font-size:.7rem;}
+#titration-panel th,#titration-panel td{border:1px solid #ddd;padding:2px 4px;text-align:center;}
+#titration-panel th{background:#f0f4f8;}
+.t2-active-row{background:#e8f4fd;font-weight:bold;}
+
+/* ═══════════════════════════════════════════════════
+   JOURNAL
+═══════════════════════════════════════════════════ */
+.journal-block{border:1px solid #e2e8f0;border-radius:6px;padding:5px 6px;margin-bottom:5px;background:#fafafa;}
+.journal-block table{width:100%;border-collapse:collapse;font-size:.66rem;}
+.journal-block th,.journal-block td{border:1px solid #e5e7eb;padding:2px 3px;text-align:center;}
+.journal-block th{background:#f1f5f9;color:#64748b;}
+.j-avg{background:#eff6ff;font-weight:bold;color:#1d4ed8;}
+
+/* ═══════════════════════════════════════════════════
+   CALCULATOR
+═══════════════════════════════════════════════════ */
+.calc-box{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px;margin-bottom:10px;}
+.calc-label{font-size:.68rem;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;}
+.calc-formula{font-family:'Courier New',monospace;background:#1e293b;color:#38bdf8;padding:6px 10px;border-radius:4px;font-size:.77rem;text-align:center;margin:5px 0;line-height:1.5;}
+.calc-input{width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:.9rem;outline:none;}
+.calc-input:focus{border-color:#3b82f6;box-shadow:0 0 0 2px rgba(59,130,246,.2);}
+.data-table{width:100%;border-collapse:collapse;}
+.data-table th,.data-table td{border:1px solid #cbd5e1;padding:7px;text-align:center;font-size:.83rem;}
+.data-table th{background:#f1f5f9;color:#475569;}
+</style>
+</head>
+<body>
+
+<!-- ══════════════ MAIN LAYOUT ══════════════ -->
+<div class="main-wrapper">
+<div class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-4">
+
+  <!-- ═══════ SIDEBAR ═══════ -->
+  <div class="md:col-span-4 space-y-3">
+
+    <!-- Header Card -->
+    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+
+      <!-- Bilingual switcher -->
+      <div class="lang-bar mb-2">
+        <button class="lang-btn active" id="btn-id" onclick="setLang('id')">ID</button>
+        <button class="lang-btn" id="btn-en" onclick="setLang('en')">EN</button>
+      </div>
+
+      <h1 class="text-lg font-bold text-slate-800 mb-0" data-i18n="app_title">Lab Simulasi Adsorpsi</h1>
+      <p class="text-xs text-slate-500 mb-3" data-i18n="app_sub">Arang Aktif · Variasi Waktu Kontak · NaOH 0,1 M</p>
+
+      <div id="instruction-panel" class="bg-blue-50 border-l-4 border-blue-500 p-3 text-sm text-blue-800 rounded mb-3"></div>
+      <div id="controls" class="space-y-2"></div>
+    </div>
+
+    <!-- Hotplate Control -->
+    <div id="hotplate-manual-panel" class="hidden bg-slate-800 p-4 rounded-xl shadow-lg border border-slate-700 text-white">
+      <h3 class="font-bold text-xs text-yellow-400 uppercase tracking-wider mb-2" data-i18n="hp_ctrl">🎮 Kontrol Hotplate</h3>
+      <div class="grid grid-cols-2 gap-3 mb-3">
+        <div>
+          <label class="text-xs text-slate-400" data-i18n="hp_temp">Suhu (°C)</label>
+          <input type="range" id="input-temp" min="0" max="100" value="0" class="w-full accent-red-500" oninput="sim.updateHPSettings()">
+          <div class="text-right text-xs font-mono text-red-400" id="val-temp">0 °C</div>
+        </div>
+        <div>
+          <label class="text-xs text-slate-400" data-i18n="hp_rpm">RPM</label>
+          <input type="range" id="input-rpm" min="0" max="1000" step="50" value="0" class="w-full accent-blue-500" oninput="sim.updateHPSettings()">
+          <div class="text-right text-xs font-mono text-blue-400" id="val-rpm">0 RPM</div>
+        </div>
+      </div>
+      <div class="p-2 bg-slate-700 rounded text-xs text-slate-300">
+        <span data-i18n="hp_target">Target</span>: <span id="target-time-display" class="font-bold text-white">-</span> <span data-i18n="hp_min">menit</span> |
+        <span data-i18n="hp_status">Status</span>: <span id="hotplate-status" class="font-bold text-red-400">OFF</span>
+      </div>
+    </div>
+
+    <!-- Titration Control Panel -->
+    <div id="titration-panel" class="hidden bg-white p-3 rounded-xl shadow-sm border border-gray-200">
+      <h3 class="font-bold text-xs text-slate-500 uppercase tracking-wider mb-1" data-i18n="tit_ctrl">🔬 Kontrol Titrasi</h3>
+      <p class="text-xs text-gray-400 mb-2">
+        <span data-i18n="tit_time">Waktu Kontak</span>: <strong id="panel-target-time" class="text-blue-600">-</strong>'
+      </p>
+      <div class="t2-monitor">
+        <div><span data-i18n="mon_sisa">Sisa NaOH</span>: <span id="t2-sisa">0.00</span> mL</div>
+        <div>ΔV: <span id="t2-dv">0.00</span> mL</div>
+        <div><span data-i18n="mon_status">Status</span>: <span id="t2-status" data-i18n="status_prep">Siapkan Alat</span></div>
+      </div>
+      <!-- step 1 -->
+      <div id="ctrl-s1">
+        <p class="text-xs font-bold mb-1 text-gray-600" data-i18n="s1_label">1. Isi Buret (NaOH 0,1 M):</p>
+        <button onmousedown="t2_fillStart()" onmouseup="t2_fillStop()" onmouseleave="t2_fillStop()" ontouchstart="t2_fillStart()" ontouchend="t2_fillStop()" data-i18n="s1_btn">🧪 Tahan → Isi Buret</button>
+        <p id="t2-fill-msg" class="text-xs text-red-500 hidden mt-1"></p>
+        <button onclick="t2_toStep2()" id="btn-step2" class="hidden btn-green" data-i18n="s1_ready">✅ Buret Siap → Lanjut</button>
+      </div>
+      <!-- step 2 -->
+      <div id="ctrl-s2" class="hidden">
+        <p class="text-xs font-bold mb-1 text-gray-600" data-i18n="s2_label">2. Pindah Erlenmeyer:</p>
+        <button class="btn-orange" onclick="t2_placeFlask()" data-i18n="s2_btn">🖐️ Ambil & Letakkan Erlenmeyer</button>
+      </div>
+      <!-- step 3 -->
+      <div id="ctrl-s3" class="hidden">
+        <p class="text-xs font-bold mb-1 text-gray-600" data-i18n="s3_label">3. Tambah Indikator PP:</p>
+        <button class="btn-orange" onclick="t2_addPP()" id="btn-add-pp" data-i18n="s3_btn">💧 Teteskan 3 Tetes PP</button>
+        <p id="t2-pp-msg" class="text-xs text-orange-500 hidden mt-1" data-i18n="s3_done">✔ 3 tetes PP ditambahkan.</p>
+      </div>
+      <!-- step 4 -->
+      <div id="ctrl-s4" class="hidden">
+        <p class="text-xs font-bold mb-1 text-gray-600" data-i18n="s4_label">4. Titrasi:</p>
+        <button onmousedown="t2_titStart()" onmouseup="t2_titStop()" onmouseleave="t2_titStop()" ontouchstart="t2_titStart()" ontouchend="t2_titStop()" data-i18n="s4_btn">💧 Tahan → Buka Keran</button>
+        <button class="btn-red" onclick="t2_finish()" id="btn-finish" disabled data-i18n="s4_finish">✅ Selesai & Catat</button>
+        <button onclick="t2_nextRep()" id="btn-nextrep" class="hidden btn-green" data-i18n="s4_next">🔄 Ulangan Berikutnya</button>
+        <button onclick="t2_toCalc()" id="btn-tocalc" class="hidden btn-purple" data-i18n="s4_calc">🧮 Hitung Konsentrasi →</button>
+      </div>
+      <!-- table -->
+      <div class="mt-2 border-t pt-2">
+        <p class="text-xs font-bold text-gray-400 mb-1" data-i18n="tit_table">Data Titrasi (3 Ulangan)</p>
+        <table>
+          <thead><tr><th data-i18n="th_ul">Ul.</th><th data-i18n="th_vawal">V Awal</th><th data-i18n="th_vakhir">V Akhir</th><th>ΔV (mL)</th><th data-i18n="th_color">Warna</th></tr></thead>
+          <tbody id="t2-tbody">
+            <tr id="t2-r1"><td>1</td><td>-</td><td>-</td><td>-</td><td>-</td></tr>
+            <tr id="t2-r2"><td>2</td><td>-</td><td>-</td><td>-</td><td>-</td></tr>
+            <tr id="t2-r3"><td>3</td><td>-</td><td>-</td><td>-</td><td>-</td></tr>
+          </tbody>
+        </table>
+        <div class="mt-1 p-1 bg-blue-50 rounded text-center text-xs font-bold">
+          <span data-i18n="tit_avg">Rata-rata ΔV</span>: <span id="t2-avg" class="text-blue-700">-</span> mL
+        </div>
+      </div>
+    </div>
+
+    <!-- Journal -->
+    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+      <h3 class="font-bold text-xs text-slate-500 uppercase tracking-wider mb-2" data-i18n="journal_title">📓 Jurnal Data</h3>
+      <div class="flex gap-1 mb-3 flex-wrap">
+        <span id="badge-15" class="px-2 py-0.5 text-xs bg-gray-200 rounded text-gray-400">15'</span>
+        <span id="badge-30" class="px-2 py-0.5 text-xs bg-gray-200 rounded text-gray-400">30'</span>
+        <span id="badge-45" class="px-2 py-0.5 text-xs bg-gray-200 rounded text-gray-400">45'</span>
+        <span id="badge-60" class="px-2 py-0.5 text-xs bg-gray-200 rounded text-gray-400">60'</span>
+      </div>
+      <div id="journal-container">
+        <p class="text-xs text-gray-400 italic" data-i18n="journal_empty">Data muncul setelah setiap variasi selesai...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════ MAIN SCENES ═══════ -->
+  <div class="md:col-span-8">
+    <div class="scene-box" id="scene-container">
+
+      <!-- SCENE 1 -->
+      <div id="scene-1" class="absolute inset-0 hidden flex flex-col items-center justify-end pb-10" style="background:url('meja1.png') center/cover no-repeat;">
+        <div id="spatula-container" class="absolute" style="top:var(--spatula-top);right:var(--spatula-right);"></div>
+        <div class="neraca">
+          <div class="kaca-arloji" id="kaca-arloji"></div>
+          <div class="digital-lcd" id="lcd-text">0.00 g</div>
+        </div>
+      </div>
+
+      <!-- SCENE 2 -->
+      <div id="scene-2" class="absolute inset-0 hidden" style="background:url('meja1.png') center/cover no-repeat;">
+        <div class="erlenmeyer-mix lab-item" id="flask-mix">
+          <div class="magnetic-bar lab-item" id="magnet-bar"></div>
+        </div>
+        <div class="hotplate-container">
+          <div class="hotplate-display" id="hotplate-timer">00:00</div>
+          <div class="knob-group-temp"><div class="knob" id="knob-temp"></div></div>
+          <div class="switch-btn-container">
+            <button id="btn-hp-power" onclick="sim.toggleHP()" class="switch-btn">START</button>
+          </div>
+          <div class="knob-group-rpm"><div class="knob" id="knob-rpm"></div></div>
+        </div>
+      </div>
+
+      <!-- SCENE 3 -->
+      <div id="scene-3" class="absolute inset-0 hidden" style="background:linear-gradient(to bottom,#2c3e50 40%,#1a252f 100%);">
+        <div style="position:absolute;bottom:0;left:0;width:100%;height:25px;background:linear-gradient(to bottom,#7f8c8d,#34495e);border-top:2px solid #95a5a6;z-index:0;"></div>
+        <div class="absolute top-3 left-4 text-xs font-bold z-10" style="color:#94a3b8;" data-i18n="scene3_label">MEJA TITRASI</div>
+        <div class="t2-statif-base"></div>
+        <div class="t2-statif-rod"></div>
+        <div class="t2-klem"></div>
+        <div class="t2-buret-container">
+          <div class="t2-spill-visual" id="t2-spill"></div>
+          <div class="t2-buret-glass">
+            <div class="t2-buret-marks"></div>
+            <div class="t2-liquid-naoh" id="t2-bliquid"></div>
+          </div>
+          <div class="t2-keran-container"><div class="t2-keran" id="t2-keran"></div></div>
+          <div class="t2-buret-tip"></div>
+        </div>
+        <div class="t2-drop" id="t2-drop"></div>
+        <div class="t2-pipette-container" id="t2-pipette">
+          <div class="t2-pipette-drop" id="t2-pip-drop"></div>
+        </div>
+        <div class="t2-erlenmeyer-container" id="t2-erl">
+          <div class="t2-flask-img"></div>
+          <div class="t2-flask-shape"><div class="t2-liquid-mix" id="t2-fliquid"></div></div>
+        </div>
+        <!-- overlay monitor -->
+        <div style="position:absolute;top:10px;right:12px;background:rgba(0,0,0,.72);color:#00ff88;font-family:'Courier New',monospace;font-size:.7rem;padding:7px 11px;border-radius:6px;z-index:10;line-height:1.9;border:1px solid rgba(0,255,136,.2);">
+          <div><span data-i18n="mon_sisa">Sisa NaOH</span>: <span id="t2-sisa-ov">0.00</span> mL</div>
+          <div>ΔV: <span id="t2-dv-ov">0.00</span> mL</div>
+          <div><span data-i18n="mon_status">Status</span>: <span id="t2-stat-ov" data-i18n="status_prep">Siapkan Alat</span></div>
+        </div>
+      </div>
+
+      <!-- SCENE 4: KALKULATOR -->
+      <div id="scene-4" class="absolute inset-0 hidden overflow-auto" style="background:linear-gradient(135deg,#f0f9ff,#e0f2fe);">
+        <div class="p-6 max-w-md mx-auto">
+          <h2 class="text-xl font-bold text-slate-800 mb-1 text-center" data-i18n="calc_title">🧮 Kalkulator Konsentrasi</h2>
+          <p class="text-center text-xs text-gray-500 mb-5">
+            <span data-i18n="calc_sub">Waktu Kontak</span>: <span id="calc-time" class="font-bold text-blue-700"></span> <span data-i18n="hp_min">menit</span>
+          </p>
+
+          <!-- Fixed data info -->
+          <div class="calc-box mb-4">
+            <div class="calc-label" data-i18n="calc_known">Data yang Diketahui</div>
+            <div class="grid grid-cols-2 gap-3 text-xs">
+              <div class="bg-white rounded-lg p-3 text-center border border-slate-200">
+                <div class="text-gray-400 mb-1" data-i18n="calc_mnaoh">Konsentrasi NaOH</div>
+                <div class="font-black text-slate-700 text-lg">0,1 M</div>
+                <div class="text-gray-400 text-xs">(tetap / fixed)</div>
+              </div>
+              <div class="bg-white rounded-lg p-3 text-center border border-slate-200">
+                <div class="text-gray-400 mb-1" data-i18n="calc_vsys">Volume Sampel Sitrat</div>
+                <div class="font-black text-slate-700 text-lg">25 mL</div>
+                <div class="text-gray-400 text-xs">(tetap / fixed)</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Input rata-rata ΔV -->
+          <div class="calc-box mb-4">
+            <label class="text-sm font-bold text-gray-700 block mb-2" data-i18n="calc_input_label">
+              Masukkan Rata-rata ΔV NaOH dari tabel titrasi:
+            </label>
+            <div class="flex items-center gap-2">
+              <input type="number" id="calc-v-input" class="calc-input flex-1" step="0.01" min="0" placeholder="0.00">
+              <span class="text-sm font-bold text-gray-500 flex-shrink-0">mL</span>
+            </div>
+            <p class="text-xs text-gray-400 mt-2" data-i18n="calc_autofill">*Nilai rata-rata dari tabel titrasi Anda otomatis diisi</p>
+          </div>
+
+          <button onclick="sim.doCalc()"
+            class="w-full bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700 active:bg-green-800 transition text-sm shadow-md mb-4"
+            data-i18n="calc_btn">
+            Hitung Konsentrasi Asam Sitrat ✓
+          </button>
+
+          <!-- Result -->
+          <div id="result-box" class="hidden bg-white rounded-2xl border-2 border-green-400 p-5 text-center shadow-lg">
+            <div class="text-xs text-gray-400 font-semibold mb-2 uppercase tracking-wider" data-i18n="res_label">Konsentrasi Asam Sitrat (M)</div>
+            <div class="text-5xl font-black text-green-600 mb-1" id="res-m">-</div>
+            <div class="text-sm text-gray-500 mb-3" id="res-note"></div>
+            <div class="bg-slate-50 rounded-lg p-3 text-xs text-slate-500 mb-3" id="res-formula-box"></div>
+            <div id="next-action"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SCENE 5: RINGKASAN -->
+      <div id="scene-5" class="absolute inset-0 hidden overflow-auto" style="background:linear-gradient(to bottom,#f8fafc,#f1f5f9);">
+        <div class="p-5 max-w-2xl mx-auto">
+          <h2 class="text-2xl font-bold mb-1 text-center text-slate-800" data-i18n="final_title">🎉 Percobaan Selesai!</h2>
+          <p class="text-center text-xs text-gray-500 mb-4" data-i18n="final_sub">Rekapitulasi Adsorpsi Arang Aktif terhadap Asam Sitrat Jeruk</p>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th data-i18n="ft_time">Waktu (menit)</th>
+                <th data-i18n="ft_dv">ΔV NaOH avg (mL)</th>
+                <th data-i18n="ft_m">M Murni Asam Sitrat (M)</th>
+              </tr>
+            </thead>
+            <tbody id="final-tbody"></tbody>
+          </table>
+          <div class="mt-4 p-3 bg-blue-50 rounded-lg text-xs text-blue-800 border border-blue-200 leading-relaxed" data-i18n="final_note">
+            <strong>Kesimpulan:</strong> Semakin lama waktu kontak arang aktif, semakin banyak asam sitrat yang teradsorpsi sehingga volume NaOH yang dibutuhkan makin sedikit.
+          </div>
+          <div class="mt-4 text-center">
+            <button onclick="location.reload()"
+              class="bg-slate-700 text-white px-6 py-2 rounded-lg shadow hover:bg-slate-800 text-sm font-bold"
+              data-i18n="final_reset">Ulangi Simulasi</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+</div><!-- /main-wrapper -->
+
+<!-- ══════════════════════════════════════════════════════════
+     JAVASCRIPT
+══════════════════════════════════════════════════════════ -->
+<script>
+/* ══════════════════════════════════════════════════════════
+   I18N — BILINGUAL
+══════════════════════════════════════════════════════════ */
+const LANG = {
+id:{
+  app_title:"Lab Simulasi Adsorpsi",app_sub:"Arang Aktif · Variasi Waktu Kontak · NaOH 0,1 M",
+  btn_layout:"Tata Letak",
+  hp_ctrl:"🎮 Kontrol Hotplate",hp_temp:"Suhu (°C)",hp_rpm:"RPM",
+  hp_target:"Target",hp_min:"menit",hp_status:"Status",
+  tit_ctrl:"🔬 Kontrol Titrasi",tit_time:"Waktu Kontak",
+  mon_sisa:"Sisa NaOH",mon_status:"Status",status_prep:"Siapkan Alat",
+  s1_label:"1. Isi Buret (NaOH 0,1 M):",s1_btn:"🧪 Tahan → Isi Buret",s1_ready:"✅ Buret Siap → Lanjut",
+  s2_label:"2. Pindah Erlenmeyer:",s2_btn:"🖐️ Ambil & Letakkan Erlenmeyer",
+  s3_label:"3. Tambah Indikator PP:",s3_btn:"💧 Teteskan 3 Tetes PP",s3_done:"✔ 3 tetes PP ditambahkan.",
+  s4_label:"4. Titrasi:",s4_btn:"💧 Tahan → Buka Keran",s4_finish:"✅ Selesai & Catat",
+  s4_next:"🔄 Ulangan Berikutnya",s4_calc:"🧮 Hitung Konsentrasi →",
+  tit_table:"Data Titrasi (3 Ulangan)",th_ul:"Ul.",th_vawal:"V Awal",th_vakhir:"V Akhir",th_color:"Warna",
+  tit_avg:"Rata-rata ΔV",
+  journal_title:"📓 Jurnal Data",journal_empty:"Data muncul setelah setiap variasi selesai...",
+  scene3_label:"MEJA TITRASI",
+  calc_title:"🧮 Kalkulator Konsentrasi",calc_sub:"Waktu Kontak",
+  calc_known:"Data yang Diketahui",calc_mnaoh:"Konsentrasi NaOH",calc_vsys:"Volume Sampel Sitrat",
+  calc_input_label:"Masukkan Rata-rata ΔV NaOH dari tabel titrasi:",
+  calc_autofill:"*Nilai rata-rata otomatis diisi dari titrasi Anda",
+  calc_btn:"Hitung Konsentrasi Asam Sitrat ✓",
+  res_label:"Konsentrasi Asam Sitrat (M)",
+  final_title:"🎉 Percobaan Selesai!",final_sub:"Rekapitulasi Adsorpsi Arang Aktif terhadap Asam Sitrat Jeruk",
+  ft_time:"Waktu (menit)",ft_dv:"ΔV NaOH avg (mL)",ft_m:"M Murni Asam Sitrat (M)",
+  final_note:"<strong>Kesimpulan:</strong> Semakin lama waktu kontak arang aktif, semakin banyak asam sitrat yang teradsorpsi sehingga volume NaOH yang dibutuhkan makin sedikit.",
+  final_reset:"Ulangi Simulasi",
+  // dynamic strings
+  instr_weigh:"Langkah 1: Timbang arang aktif ±1,00 gram.",
+  instr_magnet:"Langkah 2: Masukkan magnetic stirrer ke dalam erlenmeyer.",
+  instr_hp:"Pilih target waktu, atur Suhu & RPM, lalu tekan START.",
+  instr_success:(t,a)=>`✅ Sukses! Waktu berhenti: <b>${a.toFixed(1)} menit</b> (Target: ${t}').`,
+  instr_fail:(t,a)=>`❌ Gagal! Waktu: ${a.toFixed(1)} mnt — terlalu jauh dari target ${t}'.`,
+  instr_retry:"Tekan START lagi dan STOP tepat waktu.",
+  instr_tit:(t)=>`<b>Waktu Kontak: ${t}'</b><br>Ikuti langkah titrasi di panel sebelah kiri.`,
+  instr_calc:(t)=>`Hitung konsentrasi untuk waktu kontak <b>${t} menit</b>.`,
+  btn_addcoal:"🥄 Tambah Arang",btn_reset:"Reset",btn_next:"Lanjut →",
+  btn_magnet:"Masukkan Magnetic Bar 💊",
+  btn_titrate:"Lanjut Titrasi →",btn_retry:"Ulangi Pengadukan ↺",
+  btn_final:"Lihat Data Akhir →",btn_var:"Lanjut Variasi Lain →",
+  btn_summary:"Lihat Tabel Data Akhir 📊",
+  lbl_pick:"1. Pilih Target Waktu:",
+  lbl_hint:"2. Atur Suhu & RPM di panel hitam.\n3. Tekan START, STOP saat mendekati target.",
+  lbl_running:"⏱ Hotplate Menyala — Pantau Timer!",
+  t2_filling:"Mengisi Buret NaOH 0,1 M...",t2_spill:"⚠ AWAS TUMPAH!",t2_fail:"Gagal — isi ulang buret.",
+  t2_filled:(v)=>`Buret terisi ${v.toFixed(1)} mL ✓`,t2_min25:"Isi minimal 25 mL.",
+  t2_take:"Ambil Erlenmeyer dari meja.",t2_moved:"Erlenmeyer dipindahkan...",
+  t2_addpp:"Siap tambah Indikator PP.",t2_dropping:"Meneteskan Indikator PP...",
+  t2_pp3:"3 tetes PP selesai ✓",t2_titrating:"Sedang titrasi...",
+  t2_endpoint:"✓ Titik Akhir Tercapai!",t2_over:"⚠ Kelebihan Titrasi!",
+  t2_empty:"Buret habis!",t2_rep:(n)=>`Ulangan ${n} selesai.`,t2_alldone:"Semua ulangan selesai! 🎉",
+  t2_refill:(v)=>`Sisa ${v.toFixed(1)} mL — isi ulang!`,t2_enough:"Sisa cukup, lanjut langsung.",
+  color_pink:"<span style='color:hotpink;font-weight:bold'>Pink ✓</span>",
+  color_over:"<span style='color:purple;font-weight:bold'>Ungu</span>",
+  j_header:(t,dv,m)=>`⏱ ${t} menit | ΔV avg: ${dv} mL | M murni: ${m} M`,
+  j_avg:"Rata-rata ΔV",
+  res_note:(t,m)=>`Waktu adsorpsi ${t} menit → M asam sitrat = ${m} M`,
+  calc_err:"Masukkan volume rata-rata NaOH!",
+},
+en:{
+  app_title:"Adsorption Lab Simulation",app_sub:"Activated Carbon · Contact Time Variation · NaOH 0.1 M",
+  btn_layout:"Layout",
+  hp_ctrl:"🎮 Hotplate Controls",hp_temp:"Temp (°C)",hp_rpm:"RPM",
+  hp_target:"Target",hp_min:"min",hp_status:"Status",
+  tit_ctrl:"🔬 Titration Controls",tit_time:"Contact Time",
+  mon_sisa:"NaOH Remaining",mon_status:"Status",status_prep:"Prepare Equipment",
+  s1_label:"1. Fill Burette (NaOH 0.1 M):",s1_btn:"🧪 Hold → Fill Burette",s1_ready:"✅ Burette Ready → Next",
+  s2_label:"2. Move Erlenmeyer Flask:",s2_btn:"🖐️ Take & Place Erlenmeyer",
+  s3_label:"3. Add PP Indicator:",s3_btn:"💧 Add 3 Drops of PP",s3_done:"✔ 3 drops of PP added.",
+  s4_label:"4. Titration:",s4_btn:"💧 Hold → Open Stopcock",s4_finish:"✅ Done & Record",
+  s4_next:"🔄 Next Replicate",s4_calc:"🧮 Calculate Concentration →",
+  tit_table:"Titration Data (3 Replicates)",th_ul:"Rep.",th_vawal:"V Initial",th_vakhir:"V Final",th_color:"Color",
+  tit_avg:"Average ΔV",
+  journal_title:"📓 Data Journal",journal_empty:"Data appears after each variation is complete...",
+  scene3_label:"TITRATION BENCH",
+  calc_title:"🧮 Concentration Calculator",calc_sub:"Contact Time",
+  calc_known:"Known Data",calc_mnaoh:"NaOH Concentration",calc_vsys:"Citrate Sample Volume",
+  calc_input_label:"Enter Average ΔV NaOH from your titration table:",
+  calc_autofill:"*Average value auto-filled from your titration",
+  calc_btn:"Calculate Citric Acid Concentration ✓",
+  res_label:"Citric Acid Concentration (M)",
+  final_title:"🎉 Experiment Complete!",final_sub:"Summary: Activated Carbon Adsorption of Citric Acid",
+  ft_time:"Time (min)",ft_dv:"avg ΔV NaOH (mL)",ft_m:"Citric Acid M (pure)",
+  final_note:"<strong>Conclusion:</strong> The longer the contact time with activated carbon, the more citric acid is adsorbed, so less NaOH is needed for titration.",
+  final_reset:"Repeat Simulation",
+  // dynamic
+  instr_weigh:"Step 1: Weigh activated carbon ±1.00 gram.",
+  instr_magnet:"Step 2: Insert magnetic stirrer into the Erlenmeyer flask.",
+  instr_hp:"Select target time, set Temp & RPM, then press START.",
+  instr_success:(t,a)=>`✅ Success! Stop time: <b>${a.toFixed(1)} min</b> (Target: ${t}').`,
+  instr_fail:(t,a)=>`❌ Failed! Time: ${a.toFixed(1)} min — too far from target ${t}'.`,
+  instr_retry:"Press START again and STOP at the right time.",
+  instr_tit:(t)=>`<b>Contact Time: ${t}'</b><br>Follow the titration steps in the left panel.`,
+  instr_calc:(t)=>`Calculate concentration for contact time <b>${t} minutes</b>.`,
+  btn_addcoal:"🥄 Add Charcoal",btn_reset:"Reset",btn_next:"Continue →",
+  btn_magnet:"Insert Magnetic Bar 💊",
+  btn_titrate:"Continue to Titration →",btn_retry:"Retry Stirring ↺",
+  btn_final:"View Final Data →",btn_var:"Next Variation →",
+  btn_summary:"View Final Data Table 📊",
+  lbl_pick:"1. Select Target Time:",
+  lbl_hint:"2. Set Temp & RPM in the dark panel.\n3. Press START, STOP near the target.",
+  lbl_running:"⏱ Hotplate Running — Watch the Timer!",
+  t2_filling:"Filling Burette with NaOH 0.1 M...",t2_spill:"⚠ WARNING SPILL!",t2_fail:"Failed — refill burette.",
+  t2_filled:(v)=>`Burette filled ${v.toFixed(1)} mL ✓`,t2_min25:"Fill at least 25 mL.",
+  t2_take:"Take Erlenmeyer from the bench.",t2_moved:"Flask moved...",
+  t2_addpp:"Ready to add PP indicator.",t2_dropping:"Adding Indicator drops...",
+  t2_pp3:"3 drops of PP done ✓",t2_titrating:"Titrating...",
+  t2_endpoint:"✓ Endpoint Reached!",t2_over:"⚠ Over-titrated!",
+  t2_empty:"Burette is empty!",t2_rep:(n)=>`Replicate ${n} complete.`,t2_alldone:"All replicates done! 🎉",
+  t2_refill:(v)=>`Remaining ${v.toFixed(1)} mL — refill!`,t2_enough:"Sufficient, continue directly.",
+  color_pink:"<span style='color:hotpink;font-weight:bold'>Pink ✓</span>",
+  color_over:"<span style='color:purple;font-weight:bold'>Purple</span>",
+  j_header:(t,dv,m)=>`⏱ ${t} min | avg ΔV: ${dv} mL | M pure: ${m} M`,
+  j_avg:"Average ΔV",
+  res_note:(t,m)=>`After ${t} min adsorption → M citric acid = ${m} M`,
+  calc_err:"Please enter the average NaOH volume!",
+}};
+
+let curLang = 'id';
+function T(k,...a){ const v=LANG[curLang][k]; return typeof v==='function'?v(...a):v??k; }
+
+function setLang(l){
+  curLang=l;
+  document.getElementById('btn-id').classList.toggle('active',l==='id');
+  document.getElementById('btn-en').classList.toggle('active',l==='en');
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const k=el.getAttribute('data-i18n');
+    const v=LANG[l][k]; if(v&&typeof v==='string') el.innerHTML=v;
+  });
+  if(sim) sim.refreshInstr();
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   ADSORPTION PROFILE
+   V_NaOH = M_murni × 75  (formula inverse dari kalkulator)
+══════════════════════════════════════════════════════════ */
+const PROFILE=[
+  {t:0, M:0.260},{t:15,M:0.230},{t:30,M:0.150},{t:45,M:0.050},{t:60,M:0.010}
+];
+const M_NAOH=0.1, V_SIT=25, T2_MAX=50, T2_FB=20, T2_N=3;
+
+function getMurni(t){
+  const p=PROFILE;
+  if(t<=p[0].t)return p[0].M;
+  if(t>=p[p.length-1].t)return p[p.length-1].M;
+  for(let i=0;i<p.length-1;i++){
+    if(t>=p[i].t&&t<=p[i+1].t){ const f=(t-p[i].t)/(p[i+1].t-p[i].t); return p[i].M+f*(p[i+1].M-p[i].M); }
+  }
+  return p[p.length-1].M;
+}
+function getTargetV(M){ return Math.max(0.4, M*75); }
+
+/* ══════════════════════════════════════════════════════════
+   TITRASI STATE & FUNCTIONS
+══════════════════════════════════════════════════════════ */
+let t2Trial=1,t2Vol=0,t2Fill=0,t2Filling=false,t2Titrating=false;
+let t2Data=[],t2RepData=[],t2AnimId,t2Targets=[0,0,0];
+let eBliq,eFliq,eDrop,eErl,eKeran,eSpill,ePip;
+
+function t2refs(){
+  eBliq=document.getElementById('t2-bliquid');eFliq=document.getElementById('t2-fliquid');
+  eDrop=document.getElementById('t2-drop');eErl=document.getElementById('t2-erl');
+  eKeran=document.getElementById('t2-keran');eSpill=document.getElementById('t2-spill');
+  ePip=document.getElementById('t2-pipette');
+}
+
+function t2stat(msg){
+  ['t2-status','t2-stat-ov'].forEach(id=>{const e=document.getElementById(id);if(e)e.innerText=msg;});
+}
+function t2vd(sisa,dv){
+  const ss=parseFloat(sisa).toFixed(2),dd=parseFloat(dv).toFixed(2);
+  [['t2-sisa','t2-sisa-ov'],['t2-dv','t2-dv-ov']].forEach((ids,i)=>{
+    ids.forEach(id=>{const e=document.getElementById(id);if(e)e.innerText=i===0?ss:dd;});
+  });
+}
+
+function t2reset(){
+  cancelAnimationFrame(t2AnimId);
+  t2Trial=1;t2Vol=0;t2Fill=0;t2Filling=false;t2Titrating=false;t2Data=[];t2RepData=[];
+  if(eBliq) eBliq.style.height='0%';
+  if(eFliq){eFliq.style.height=T2_FB+'px';eFliq.style.backgroundColor='var(--t2-color-jeruk)';}
+  if(eDrop){eDrop.classList.remove('t2-anim-drip');eDrop.style.opacity=0;}
+  if(eErl)  eErl.classList.remove('placed','t2-anim-shake');
+  if(eSpill) eSpill.classList.remove('active');
+  if(ePip)   ePip.classList.remove('active');
+  if(eKeran) eKeran.style.transform='rotate(0deg)';
+  t2vd(0,0); t2stat(T('status_prep'));
+  for(let i=1;i<=T2_N;i++){
+    const r=document.getElementById(`t2-r${i}`);
+    if(r){r.cells[1].innerText='-';r.cells[2].innerText='-';r.cells[3].innerText='-';r.cells[4].innerText='-';r.classList.remove('t2-active-row');}
+  }
+  document.getElementById('t2-avg').innerText='-';
+  document.getElementById('ctrl-s1').classList.remove('hidden');
+  ['ctrl-s2','ctrl-s3','ctrl-s4'].forEach(id=>document.getElementById(id).classList.add('hidden'));
+  document.getElementById('t2-fill-msg').classList.add('hidden');
+  document.getElementById('btn-step2').classList.add('hidden');
+  document.getElementById('t2-pp-msg').classList.add('hidden');
+  document.getElementById('btn-add-pp').disabled=false;
+  const bf=document.getElementById('btn-finish');if(bf){bf.classList.remove('hidden');bf.disabled=true;}
+  document.getElementById('btn-nextrep').classList.add('hidden');
+  document.getElementById('btn-tocalc').classList.add('hidden');
+}
+
+function t2hl(i){
+  for(let j=1;j<=T2_N;j++){const r=document.getElementById(`t2-r${j}`);if(r)r.classList.remove('t2-active-row');}
+  const r=document.getElementById(`t2-r${i}`);if(r)r.classList.add('t2-active-row');
+}
+
+/* Step 1 */
+function t2_fillStart(){
+  if(t2Fill>=T2_MAX)return;
+  t2Filling=true;
+  document.getElementById('t2-fill-msg').classList.add('hidden');
+  t2stat(T('t2_filling'));
+  (function tick(){
+    if(!t2Filling)return;
+    t2Fill+=0.4;
+    eBliq.style.height=`${Math.min((t2Fill/T2_MAX)*100,100)}%`;
+    t2vd(Math.min(t2Fill,T2_MAX),0);
+    if(t2Fill>T2_MAX){eSpill.classList.add('active');t2stat(T('t2_spill'));}
+    t2AnimId=requestAnimationFrame(tick);
+  })();
+}
+function t2_fillStop(){
+  t2Filling=false;cancelAnimationFrame(t2AnimId);
+  if(t2Fill>T2_MAX){
+    setTimeout(()=>{t2Fill=0;eBliq.style.height='0%';eSpill.classList.remove('active');t2stat(T('t2_fail'));t2vd(0,0);},1500);
+  }else if(t2Fill>=25){
+    document.getElementById('btn-step2').classList.remove('hidden');
+    t2stat(T('t2_filled',t2Fill));
+  }else{
+    const m=document.getElementById('t2-fill-msg');m.innerText=T('t2_min25');m.classList.remove('hidden');
+  }
+}
+function t2_toStep2(){
+  document.getElementById('ctrl-s1').classList.add('hidden');
+  document.getElementById('ctrl-s2').classList.remove('hidden');
+  t2stat(T('t2_take'));
+}
+
+/* Step 2 */
+function t2_placeFlask(){
+  eErl.classList.add('placed');t2stat(T('t2_moved'));
+  setTimeout(()=>{
+    document.getElementById('ctrl-s2').classList.add('hidden');
+    document.getElementById('ctrl-s3').classList.remove('hidden');
+    t2stat(T('t2_addpp'));
+  },1500);
+}
+
+/* Step 3 */
+function t2_addPP(){
+  document.getElementById('btn-add-pp').disabled=true;
+  t2stat(T('t2_dropping'));ePip.classList.add('active');
+  setTimeout(()=>{
+    const d=document.getElementById('t2-pip-drop');let c=0;
+    (function go(){d.classList.remove('t2-anim-pip-drip');void d.offsetWidth;d.classList.add('t2-anim-pip-drip');c++;
+    if(c<3)setTimeout(go,600);else setTimeout(()=>{ePip.classList.remove('active');document.getElementById('t2-pp-msg').classList.remove('hidden');t2stat(T('t2_pp3'));setTimeout(()=>{document.getElementById('ctrl-s3').classList.add('hidden');document.getElementById('ctrl-s4').classList.remove('hidden');t2hl(t2Trial);},900);},600);})();
+  },500);
+}
+
+/* Step 4 */
+function t2_upd(){
+  const sisa=t2Fill-t2Vol;
+  eBliq.style.height=`${Math.max((sisa/T2_MAX)*100,0)}%`;
+  eFliq.style.height=`${T2_FB+t2Vol*1.5}px`;
+  t2vd(Math.max(sisa,0),t2Vol);
+  const tgt=t2Targets[t2Trial-1];
+  if(t2Vol>=tgt+0.5){eFliq.style.backgroundColor='var(--t2-color-over)';t2stat(T('t2_over'));}
+  else if(t2Vol>=tgt){eFliq.style.backgroundColor='var(--t2-color-pink)';t2stat(T('t2_endpoint'));document.getElementById('btn-finish').disabled=false;}
+  else{eFliq.style.backgroundColor='var(--t2-color-jeruk)';t2stat(T('t2_titrating'));}
+}
+function t2_titStart(){
+  if(t2Titrating)return;
+  if(t2Fill-t2Vol<=0){t2stat(T('t2_empty'));return;}
+  t2Titrating=true;eKeran.style.transform='rotate(90deg)';
+  eDrop.classList.add('t2-anim-drip');eDrop.style.opacity=1;
+  eErl.classList.add('t2-anim-shake');
+  (function tick(){if(!t2Titrating)return;t2Vol+=0.05;if(t2Vol>=t2Fill){t2_titStop();return;}t2_upd();t2AnimId=requestAnimationFrame(tick);})();
+}
+function t2_titStop(){
+  t2Titrating=false;cancelAnimationFrame(t2AnimId);
+  eKeran.style.transform='rotate(0deg)';
+  eDrop.classList.remove('t2-anim-drip');eDrop.style.opacity=0;
+  eErl.classList.remove('t2-anim-shake');
+}
+function t2_finish(){
+  const tgt=t2Targets[t2Trial-1];const isOver=t2Vol>tgt+0.5;
+  const vAkhir=Math.max(0,t2Fill-t2Vol);
+  t2Data.push(t2Vol);
+  t2RepData.push({rep:t2Trial,vA:parseFloat(t2Fill.toFixed(2)),vK:parseFloat(vAkhir.toFixed(2)),dv:parseFloat(t2Vol.toFixed(2))});
+  const row=document.getElementById(`t2-r${t2Trial}`);
+  row.cells[1].innerText=t2Fill.toFixed(2);row.cells[2].innerText=vAkhir.toFixed(2);row.cells[3].innerText=t2Vol.toFixed(2);
+  row.cells[4].innerHTML=isOver?T('color_over'):T('color_pink');row.classList.remove('t2-active-row');
+  const avg=t2Data.reduce((a,b)=>a+b,0)/t2Data.length;document.getElementById('t2-avg').innerText=avg.toFixed(2);
+  document.getElementById('btn-finish').classList.add('hidden');
+  if(t2Trial<T2_N){document.getElementById('btn-nextrep').classList.remove('hidden');t2stat(T('t2_rep',t2Trial));}
+  else{document.getElementById('btn-tocalc').classList.remove('hidden');t2stat(T('t2_alldone'));}
+}
+function t2_nextRep(){
+  t2Fill=Math.max(0,t2Fill-t2Vol);t2Vol=0;t2Trial++;
+  eErl.classList.remove('placed');eFliq.style.backgroundColor='var(--t2-color-jeruk)';eFliq.style.height=T2_FB+'px';
+  eBliq.style.height=`${(t2Fill/T2_MAX)*100}%`;t2vd(t2Fill,0);
+  document.getElementById('btn-add-pp').disabled=false;document.getElementById('t2-pp-msg').classList.add('hidden');
+  document.getElementById('ctrl-s4').classList.add('hidden');document.getElementById('ctrl-s1').classList.remove('hidden');
+  document.getElementById('btn-nextrep').classList.add('hidden');
+  const bf=document.getElementById('btn-finish');bf.classList.remove('hidden');bf.disabled=true;
+  t2hl(t2Trial);
+  if(t2Fill>=25){document.getElementById('btn-step2').classList.remove('hidden');t2stat(T('t2_enough'));}
+  else{document.getElementById('btn-step2').classList.add('hidden');const m=document.getElementById('t2-fill-msg');m.innerText=T('t2_refill',t2Fill);m.classList.remove('hidden');t2stat(T('t2_refill',t2Fill));}
+}
+function t2_toCalc(){
+  sim.titData=t2Data.slice();sim.repData=t2RepData.slice();
+  document.getElementById('titration-panel').classList.add('hidden');
+  sim.initCalc();
+}
+
+/* ══════════════════════════════════════════════════════════
+   LAB SIMULATION CLASS
+══════════════════════════════════════════════════════════ */
+class LabSim {
+  constructor(){
+    this.weight=0;this.tgt=0;this.elapsed=0;this.stopTime=0;
+    this.hpOn=false;this.hpTemp=0;this.hpRPM=0;this.hpInterval=null;
+    this.hasMagnet=false;this.vars=[15,30,45,60];this.done={};
+    this.titData=[];this.repData=[];this.baseV=0;
+    this.dom={
+      scenes:[1,2,3,4,5].map(i=>document.getElementById(`scene-${i}`)),
+      instr:document.getElementById('instruction-panel'),
+      ctrl:document.getElementById('controls'),
+      hpPanel:document.getElementById('hotplate-manual-panel'),
+      titPanel:document.getElementById('titration-panel'),
+      hpTimer:document.getElementById('hotplate-timer'),
+      hpBtn:document.getElementById('btn-hp-power'),
+      kT:document.getElementById('knob-temp'),kR:document.getElementById('knob-rpm'),
+      iT:document.getElementById('input-temp'),iR:document.getElementById('input-rpm'),
+      vT:document.getElementById('val-temp'),vR:document.getElementById('val-rpm'),
+      hpStat:document.getElementById('hotplate-status'),ttd:document.getElementById('target-time-display'),
+      lcd:document.getElementById('lcd-text'),ka:document.getElementById('kaca-arloji'),
+      spCont:document.getElementById('spatula-container'),
+      fMix:document.getElementById('flask-mix'),mag:document.getElementById('magnet-bar'),
+      badges:{15:document.getElementById('badge-15'),30:document.getElementById('badge-30'),45:document.getElementById('badge-45'),60:document.getElementById('badge-60')}
+    };
+    this.initS1();
+  }
+
+  sw(n){this.curScene=n;this.dom.scenes.forEach(e=>e.classList.add('hidden'));this.dom.scenes[n-1].classList.remove('hidden');}
+  setI(msg,t='blue'){
+    const m={blue:'bg-blue-50 border-l-4 border-blue-500 p-3 text-sm text-blue-800 rounded mb-3',
+              green:'bg-green-100 border-l-4 border-green-500 p-3 text-sm text-green-800 rounded mb-3',
+              red:'bg-red-100 border-l-4 border-red-500 p-3 text-sm text-red-800 rounded mb-3'};
+    this.dom.instr.className=m[t]||m.blue;this.dom.instr.innerHTML=msg;
+  }
+  refreshInstr(){
+    switch(this.curScene||1){
+      case 1: this.setI(T('instr_weigh')); this.renderC1(); break;
+      case 2:
+        if(!this.hasMagnet){ this.setI(T('instr_magnet')); this.dom.ctrl.innerHTML=`<button onclick="sim.dropMag()" class="w-full bg-gray-600 text-white py-3 rounded shadow hover:bg-gray-700 font-bold">${T('btn_magnet')}</button>`; }
+        else if(this.hpOn){ this.dom.ctrl.innerHTML=`<div class="p-3 bg-yellow-50 text-yellow-800 rounded border border-yellow-300 text-center text-sm animate-pulse">${T('lbl_running')}</div>`; }
+        else{ this.setI(T('instr_hp')); this.renderC2(); }
+        break;
+      case 3: this.setI(T('instr_tit',this.tgt)); break;
+      case 4: this.setI(T('instr_calc',this.tgt)); break;
+    }
+  }
+
+  /* ── Scene 1 ── */
+  initS1(){
+    this.sw(1);this.dom.hpPanel.classList.add('hidden');this.dom.titPanel.classList.add('hidden');
+    this.setI(T('instr_weigh'));this.renderC1();
+  }
+  renderC1(){
+    this.dom.ctrl.innerHTML=`
+      <button onclick="sim.addCoal()" class="w-full bg-slate-700 text-white py-2 rounded shadow hover:bg-slate-800 mb-2 font-semibold flex items-center justify-center gap-2">${T('btn_addcoal')}</button>
+      <button onclick="sim.resetW()" class="w-full bg-red-100 text-red-600 py-2 rounded hover:bg-red-200 text-sm">${T('btn_reset')}</button>
+      <button onclick="sim.finishW()" id="btn-done-w" disabled class="w-full mt-3 bg-green-600 text-white py-2.5 rounded shadow hover:bg-green-700 disabled:bg-gray-300 font-bold">${T('btn_next')}</button>`;
+  }
+  addCoal(){
+    if(this.weight>1.5)return;
+    const s=document.createElement('div');s.className='spatula-animate absolute';this.dom.spCont.appendChild(s);
+    setTimeout(()=>{this.weight+=(Math.random()*.15)+.1;this.dom.lcd.innerText=this.weight.toFixed(2)+' g';this.dom.ka.style.backgroundImage='var(--img-kaca-arloji-isi)';this.checkW();},750);
+    setTimeout(()=>s.remove(),1600);
+  }
+  resetW(){this.weight=0;this.dom.lcd.innerText='0.00 g';this.dom.ka.style.backgroundImage='var(--img-kaca-arloji)';document.getElementById('btn-done-w').disabled=true;}
+  checkW(){document.getElementById('btn-done-w').disabled=!(this.weight>=.95&&this.weight<=1.05);}
+  finishW(){this.initS2();}
+
+  /* ── Scene 2 ── */
+  initS2(){
+    this.sw(2);this.dom.fMix.classList.add('black');
+    this.dom.hpPanel.classList.remove('hidden');this.dom.titPanel.classList.add('hidden');
+    this.elapsed=0;this.hpOn=false;this.tgt=0;this.updateHpUI();this.updateBadges();
+    if(!this.hasMagnet){
+      this.dom.mag.style.opacity=0;this.setI(T('instr_magnet'));
+      this.dom.ctrl.innerHTML=`<button onclick="sim.dropMag()" class="w-full bg-gray-600 text-white py-3 rounded shadow hover:bg-gray-700 font-bold">${T('btn_magnet')}</button>`;
+    }else{
+      this.setI(T('instr_hp'));this.renderC2();
+    }
+  }
+  updateHPSettings(){
+    this.hpTemp=parseInt(this.dom.iT.value);this.hpRPM=parseInt(this.dom.iR.value);
+    this.dom.vT.innerText=this.hpTemp+' °C';this.dom.vR.innerText=this.hpRPM+' RPM';
+    this.dom.kT.style.transform=`rotate(${this.hpTemp*1.8}deg)`;
+    this.dom.kR.style.transform=`rotate(${this.hpRPM*.2}deg)`;
+    if(this.hpOn&&this.hpRPM>0) this.dom.mag.style.animationDuration=`${Math.max(.1,200/this.hpRPM)}s`;
+  }
+  updateHpUI(){
+    const m=Math.floor(this.elapsed),s=Math.floor((this.elapsed-m)*60);
+    this.dom.hpTimer.innerText=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    if(this.hpOn){
+      this.dom.hpBtn.innerText='STOP';this.dom.hpBtn.classList.add('on');
+      this.dom.hpStat.innerText='RUNNING';this.dom.hpStat.className='font-bold text-green-400';
+      if(this.hpRPM>0){this.dom.mag.classList.add('spin');this.dom.mag.style.animationDuration=`${Math.max(.1,200/this.hpRPM)}s`;}
+    }else{
+      this.dom.hpBtn.innerText='START';this.dom.hpBtn.classList.remove('on');
+      this.dom.hpStat.innerText='OFF';this.dom.hpStat.className='font-bold text-red-400';
+      this.dom.mag.classList.remove('spin');
+    }
+  }
+  dropMag(){
+    this.dom.mag.classList.add('magnet-drop');
+    setTimeout(()=>{this.dom.mag.style.opacity=1;this.dom.mag.style.top='auto';this.dom.mag.style.bottom='var(--magnet-bottom)';this.hasMagnet=true;this.initS2();},800);
+  }
+  renderC2(){
+    const allDone=Object.keys(this.done).length===4;
+    if(allDone){this.dom.ctrl.innerHTML=`<button onclick="sim.showFinal()" class="w-full bg-teal-600 text-white py-3 rounded shadow hover:bg-teal-700 font-bold animate-pulse">${T('btn_final')}</button>`;return;}
+    let btns='';
+    this.vars.forEach(t=>{
+      const isDone=this.done.hasOwnProperty(t);
+      const isActive=this.tgt===t;
+      const bg=isDone?'bg-gray-200 text-gray-400 cursor-not-allowed':'bg-blue-100 text-blue-800 hover:bg-blue-200';
+      const ring=isActive?'ring-2 ring-blue-600':'';
+      const dis=isDone?'disabled':`onclick="sim.setTgt(${t})"`;
+      btns+=`<button ${dis} class="${bg} ${ring} py-2 rounded border border-blue-100 transition font-bold text-sm">${t}'</button>`;
+    });
+    this.dom.ctrl.innerHTML=`<p class="text-sm font-bold mb-2">${T('lbl_pick')}</p><div class="grid grid-cols-4 gap-1.5 mb-3">${btns}</div><p class="text-xs text-gray-400 italic">${T('lbl_hint')}</p>`;
+  }
+  setTgt(t){this.tgt=t;this.dom.ttd.innerText=t;this.renderC2();this.updateBadges();}
+  toggleHP(){
+    if(!this.tgt){alert(T('instr_hp'));return;}
+    if(!this.hpRPM){alert(T('instr_hp'));return;}
+    if(!this.hpOn){
+      this.hpOn=true;this.elapsed=0;
+      this.dom.ctrl.innerHTML=`<div class="p-3 bg-yellow-50 text-yellow-800 rounded border border-yellow-300 text-center text-sm animate-pulse">${T('lbl_running')}</div>`;
+      this.hpInterval=setInterval(()=>{this.elapsed+=.1;this.updateHpUI();},100);
+    }else{
+      this.hpOn=false;clearInterval(this.hpInterval);this.updateHpUI();this.checkStop();
+    }
+  }
+  checkStop(){
+    this.stopTime=this.elapsed;
+    const Mm=getMurni(this.stopTime);this.baseV=getTargetV(Mm);
+    const diff=Math.abs(this.elapsed-this.tgt);
+    if(diff<=2.0){
+      this.setI(T('instr_success',this.tgt,this.stopTime),'green');
+      this.dom.ctrl.innerHTML=`<button onclick="sim.initS3()" class="w-full bg-indigo-600 text-white py-3 rounded shadow hover:bg-indigo-700 font-bold">${T('btn_titrate')}</button>`;
+    }else{
+      this.setI(T('instr_fail',this.tgt,this.stopTime),'red');
+      this.dom.ctrl.innerHTML=`<button onclick="sim.resetHP()" class="w-full bg-slate-600 text-white py-2 rounded shadow hover:bg-slate-700">${T('btn_retry')}</button>`;
+    }
+  }
+  resetHP(){this.elapsed=0;this.updateHpUI();this.setI(T('instr_retry'));this.renderC2();}
+  updateBadges(){
+    this.vars.forEach(t=>{
+      const b=this.dom.badges[t];
+      if(this.done[t]){b.className='px-2 py-0.5 text-xs bg-green-500 text-white rounded font-bold';b.innerHTML=`${t}' ✓`;}
+      else if(this.tgt===t){b.className='px-2 py-0.5 text-xs bg-blue-500 text-white rounded font-bold animate-pulse';b.innerHTML=`${t}'`;}
+      else{b.className='px-2 py-0.5 text-xs bg-gray-200 rounded text-gray-400';b.innerHTML=`${t}'`;}
+    });
+  }
+
+  /* ── Scene 3 ── */
+  initS3(){
+    this.sw(3);this.dom.hpPanel.classList.add('hidden');this.dom.titPanel.classList.remove('hidden');
+    this.dom.ctrl.innerHTML='';this.setI(T('instr_tit',this.tgt));
+    document.getElementById('panel-target-time').innerText=this.tgt;
+    const base=this.baseV,sp=Math.min(.15,base*.015);
+    t2Targets[0]=Math.max(.3,parseFloat((base+(Math.random()*sp*2-sp)).toFixed(2)));
+    t2Targets[1]=Math.max(.3,parseFloat((base+(Math.random()*sp*2-sp)).toFixed(2)));
+    t2Targets[2]=Math.max(.3,parseFloat((base+(Math.random()*sp*2-sp)).toFixed(2)));
+    t2refs();t2reset();
+  }
+
+  /* ── Scene 4 ── */
+  initCalc(){
+    this.sw(4);this.dom.titPanel.classList.add('hidden');this.setI(T('instr_calc',this.tgt));
+    document.getElementById('calc-time').innerText=this.tgt;
+    document.getElementById('result-box').classList.add('hidden');
+    // Auto-fill rata-rata dari titrasi
+    const avg=this.titData.reduce((a,b)=>a+b,0)/this.titData.length;
+    document.getElementById('calc-v-input').value=avg.toFixed(2);
+    this.updateBadges();
+  }
+  doCalc(){
+    const vN=parseFloat(document.getElementById('calc-v-input').value);
+    if(isNaN(vN)||vN<=0){alert(T('calc_err'));return;}
+    // M_sitrat dalam larutan = (M_NaOH × V_NaOH) / (3 × V_sitrat)
+    const Mcalc=(M_NAOH*vN)/(3*V_SIT);
+    // M_murni = Mcalc × 10 (koreksi faktor pengenceran larutan jeruk 10%)
+    const Mmurni=Mcalc*10;
+    // Simpan
+    this.done[this.tgt]={avgDV:vN.toFixed(2),Mm:Mmurni.toFixed(4),repData:this.repData.slice()};
+    // Tampilkan hasil
+    document.getElementById('result-box').classList.remove('hidden');
+    document.getElementById('res-m').innerText=Mmurni.toFixed(4)+' M';
+    document.getElementById('res-note').innerText=T('res_note',this.tgt,Mmurni.toFixed(4));
+    // Show formula for reference (compact)
+    document.getElementById('res-formula-box').innerHTML=
+      `M = (0,1 × ${vN.toFixed(2)}) / (3 × 25) × 10 = <strong>${Mmurni.toFixed(4)} M</strong>`;
+    this.updateJournal();this.updateBadges();
+    const na=document.getElementById('next-action');
+    if(Object.keys(this.done).length>=4){
+      na.innerHTML=`<button onclick="sim.showFinal()" class="w-full bg-teal-600 text-white py-2 rounded-lg font-bold hover:bg-teal-700 text-sm">${T('btn_summary')}</button>`;
+    }else{
+      na.innerHTML=`<button onclick="sim.initS2()" class="w-full bg-blue-600 text-white py-2 rounded-lg font-bold hover:bg-blue-700 text-sm">${T('btn_var')}</button>`;
+    }
+  }
+
+  /* ── Journal ── */
+  updateJournal(){
+    const c=document.getElementById('journal-container');
+    let html='';
+    this.vars.forEach(t=>{
+      const d=this.done[t];if(!d)return;
+      html+=`<div class="journal-block">
+        <div class="text-xs font-bold text-blue-700 mb-1">${T('j_header',t,d.avgDV,d.Mm)}</div>
+        <table><thead><tr>
+          <th>${T('th_ul')}</th><th>${T('th_vawal')} (mL)</th>
+          <th>${T('th_vakhir')} (mL)</th><th>ΔV (mL)</th>
+        </tr></thead><tbody>`;
+      d.repData.forEach(r=>{html+=`<tr><td>${r.rep}</td><td>${r.vA.toFixed(2)}</td><td>${r.vK.toFixed(2)}</td><td><b>${r.dv.toFixed(2)}</b></td></tr>`;});
+      html+=`<tr class="j-avg"><td colspan="3">${T('j_avg')}</td><td>${d.avgDV} mL</td></tr>`;
+      html+=`</tbody></table></div>`;
+    });
+    c.innerHTML=html||`<p class="text-xs text-gray-400 italic">${T('journal_empty')}</p>`;
+  }
+
+  /* ── Scene 5 ── */
+  showFinal(){
+    this.sw(5);this.dom.titPanel.classList.add('hidden');
+    const tb=document.getElementById('final-tbody');tb.innerHTML='';
+    this.vars.forEach(t=>{
+      const d=this.done[t];
+      tb.innerHTML+=d
+        ?`<tr><td class="font-bold">${t}</td><td>${d.avgDV}</td><td class="text-blue-700 font-bold">${d.Mm}</td></tr>`
+        :`<tr><td>${t}</td><td>-</td><td>-</td></tr>`;
+    });
+  }
+}
+
+/* ── INIT ── */
+const sim=new LabSim();
+</script>
+</body>
+</html>

@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="title">Simulasi Preparasi Larutan Jeruk 10%</title>
+    <style>
+        /* =========================================
+           1. KONFIGURASI ASET (CSS VARIABLES)
+           ========================================= */
+        :root {
+            /* --- SCENE 1: PASAR --- */
+            --bg-pasar: url('background_pasar.png'); 
+            --img-jeruk-utuh: url('jeruk.png');
+            --img-apel: url('apel.png');
+            --img-pisang: url('pisang.png');
+            
+            /* --- SCENE 2, 3, 4: LABORATORIUM --- */
+            --bg-lab: url('background_lab.png'); 
+            --img-pisau: url('pisau.png');
+            --img-jeruk-kupas: url('jeruk_kupas.png');
+            --img-perasan: url('alat_peras.png');
+            --img-gelas-sari-keruh: url('sari_keruh.png');
+            --img-saringan: url('saringan.png');
+            --img-gelas-sari-jernih: url('sari_jernih.png');
+
+            /* --- ALAT PENGENCERAN & SIMPAN --- */
+            --img-botol-aquadm: url('botol_aquadm.png');
+            --img-labu-campur: url('labu_campur.png'); 
+            --img-gelas-ukur-isi: url('gelas_ukur_isi.png');
+            --img-botol-simpan: url('botol_simpan.png');
+
+            /* --- UKURAN & UI --- */
+            --size-buah: 120px;
+            --color-primary: #2c3e50;
+            --color-accent: #e67e22;
+            --color-success: #27ae60;
+            --color-error: #c0392b;
+        }
+
+        /* =========================================
+           2. RESET & LAYOUT DASAR
+           ========================================= */
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        
+        body {
+            background-color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: #333;
+        }
+
+        #game-container {
+            width: 100%;
+            max-width: 800px;
+            height: 600px;
+            background-color: white;
+            position: relative;
+            overflow: hidden;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            background: var(--color-primary);
+            color: white;
+            padding: 15px;
+            text-align: center;
+            z-index: 10;
+        }
+
+        #instruction-bar {
+            background: #fff3cd;
+            color: #856404;
+            padding: 10px;
+            text-align: center;
+            font-weight: bold;
+            border-bottom: 2px solid #ffeeba;
+            min-height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .scene {
+            flex: 1;
+            position: relative;
+            display: none;
+            transition: opacity 0.5s;
+        }
+
+        .scene.active {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* =========================================
+           3. SCENE SPECIFIC STYLES
+           ========================================= */
+        
+        /* SCENE 1: PASAR */
+        #scene-market { background-image: var(--bg-pasar); background-color: #f0e68c; background-size: cover; background-position: center; }
+        .market-shelf { display: flex; gap: 20px; padding: 20px; background: rgba(255,255,255,0.8); border-radius: 15px; }
+        .item-market { width: var(--size-buah); height: var(--size-buah); background-size: contain; background-repeat: no-repeat; background-position: center; cursor: pointer; transition: transform 0.2s; border-radius: 10px; background-color: rgba(255,255,255,0.7); }
+        .item-market:hover { transform: scale(1.1); background-color: rgba(255,255,255,0.9); }
+
+        /* SCENE 2, 3, 4: LAB BACKGROUND */
+        #scene-extraction, #scene-dilution, #scene-storage { 
+            background-image: var(--bg-lab); background-color: #e0f7fa; background-size: cover; background-position: center; 
+        }
+
+        /* --- Panel Meja Kerja Ekstraksi --- */
+        .workbench-panel {
+            background: rgba(255, 255, 255, 0.85); /* Latar belakang putih semi-transparan */
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            width: 90%;
+            max-width: 600px;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .workbench { 
+            display: flex; 
+            align-items: flex-end; 
+            justify-content: space-around; 
+            width: 100%; 
+        }
+
+        .tool-slot { 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            width: 150px; 
+            cursor: pointer; 
+            transition: opacity 0.3s, transform 0.2s; 
+            position: relative; 
+            padding: 10px;
+            border-radius: 10px;
+        }
+        .tool-slot:hover:not(.disabled) {
+            background-color: rgba(255, 255, 255, 0.9);
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .tool-slot.disabled { opacity: 0.4; pointer-events: none; filter: grayscale(80%); }
+        .tool-img { width: 100px; height: 100px; background-size: contain; background-repeat: no-repeat; background-position: center; margin-bottom: 10px; position: relative; z-index: 1; }
+        .tool-icon { font-size: 30px; position: absolute; top: -10px; right: 10px; z-index: 2; transition: transform 0.2s; }
+        .tool-slot span { font-weight: bold; text-align: center; color: var(--color-primary); }
+
+        /* Custom Images Placeholder */
+        .img-jeruk-raw { background-image: var(--img-jeruk-utuh), url('https://via.placeholder.com/100/FFA500/FFFFFF?text=Jeruk'); }
+        .img-jeruk-kupas { background-image: var(--img-jeruk-kupas), url('https://via.placeholder.com/100/FFD700/FFFFFF?text=Kupas'); }
+        .img-perasan { background-image: var(--img-perasan), url('https://via.placeholder.com/100/A9A9A9/FFFFFF?text=Peras'); }
+        .img-saringan { background-image: var(--img-saringan), url('https://via.placeholder.com/100/C0C0C0/000000?text=Saring'); }
+
+        .dilution-container { background: rgba(255,255,255,0.95); padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center; max-width: 600px; }
+        .chemical-input { display: flex; align-items: center; justify-content: space-between; margin: 15px 0; padding: 10px; border: 1px solid #ddd; border-radius: 8px; background: white; }
+        .chemical-icon { width: 50px; height: 50px; background-size: contain; background-repeat: no-repeat; background-position: center; }
+        input[type="number"] { padding: 8px; width: 100px; font-size: 16px; border: 2px solid #ccc; border-radius: 4px; }
+        
+        .btn-action { background: var(--color-accent); color: white; border: none; padding: 12px 24px; font-size: 16px; border-radius: 50px; cursor: pointer; margin-top: 20px; transition: background 0.3s, transform 0.1s; font-weight: bold; }
+        .btn-action:hover { background: #d35400; }
+        .btn-action:active { transform: scale(0.95); }
+        .btn-action:disabled { background: #95a5a6; cursor: not-allowed; transform: none; }
+
+        /* MODAL FEEDBACK */
+        #feedback-modal { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0); background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 40px rgba(0,0,0,0.4); text-align: center; z-index: 100; transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); width: 80%; max-width: 400px; }
+        #feedback-modal.show { transform: translate(-50%, -50%) scale(1); }
+        #feedback-modal h3 { margin-bottom: 10px; }
+        #feedback-modal button { margin-top: 15px; padding: 8px 20px; background: var(--color-primary); color: white; border: none; border-radius: 5px; cursor: pointer; }
+
+        /* =========================================
+           4. ANIMASI KEYFRAMES
+           ========================================= */
+        @keyframes slice { 0%, 100% { transform: translate(0, 0) rotate(0deg); } 25% { transform: translate(-15px, 15px) rotate(-30deg); } 50% { transform: translate(10px, -5px) rotate(10deg); } }
+        .anim-slicing .tool-icon { animation: slice 0.5s ease-in-out infinite; }
+        
+        @keyframes squish { 0%, 100% { transform: scaleY(1) translateY(0); } 50% { transform: scaleY(0.7) scaleX(1.1) translateY(15px); } }
+        .anim-squishing .tool-img { animation: squish 0.6s ease-in-out infinite; transform-origin: bottom center; }
+        
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px) rotate(-5deg); } 75% { transform: translateX(5px) rotate(5deg); } }
+        .anim-shaking .tool-img { animation: shake 0.4s ease-in-out infinite; }
+
+        /* Animasi Menggoyangkan Botol (Homogenisasi) */
+        @keyframes shake-bottle {
+            0%, 100% { transform: rotate(0deg) translateX(0); }
+            25% { transform: rotate(15deg) translateX(15px); }
+            75% { transform: rotate(-15deg) translateX(-15px); }
+        }
+        .anim-shake-bottle {
+            animation: shake-bottle 0.6s ease-in-out infinite;
+            transform-origin: bottom center;
+        }
+
+        /* Animasi Perubahan Warna Cairan */
+        @keyframes blend { 0%, 100% { filter: contrast(100%) hue-rotate(0deg); } 50% { filter: contrast(130%) hue-rotate(20deg); } }
+        .anim-blending { animation: blend 2s ease-in-out infinite; }
+
+        /* Animasi Menuang (Miring) */
+        @keyframes tilt-pour {
+            0% { transform: rotate(0deg); }
+            20%, 80% { transform: rotate(60deg); }
+            100% { transform: rotate(0deg); opacity: 0; }
+        }
+        .anim-tilt { animation: tilt-pour 3.5s forwards; transform-origin: 85px 80px; } /* Titik putar di ujung mulut gelas */
+
+        /* Animasi Aliran Cairan */
+        @keyframes flow-pour {
+            0%, 100% { height: 0; opacity: 0; }
+            20% { height: 0; opacity: 1; top: 80px; }
+            30%, 75% { height: 110px; opacity: 1; top: 80px; }
+            85% { height: 0; opacity: 0; top: 190px; }
+        }
+        .anim-flow { animation: flow-pour 3.5s forwards; }
+
+        /* Slider Kustom untuk Membidik Posisi Tuang */
+        .slider-container { margin-top: 20px; width: 100%; max-width: 300px; background: rgba(255,255,255,0.8); padding: 15px; border-radius: 10px; }
+        input[type=range] { width: 100%; cursor: pointer; }
+
+        /* =========================================
+           5. CSS TAMBAHAN: TOGGLE BAHASA
+           ========================================= */
+        .lang-toggle-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 30px;
+            padding: 5px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+            display: flex;
+            gap: 5px;
+            border: 1px solid #ddd;
+        }
+        .btn-lang {
+            border: none;
+            background: transparent;
+            padding: 6px 14px;
+            border-radius: 30px;
+            font-weight: bold;
+            font-size: 14px;
+            cursor: pointer;
+            color: #7f8c8d;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+        .btn-lang:hover:not(.active) {
+            color: var(--color-primary);
+            background: rgba(0,0,0,0.05);
+        }
+        .btn-lang.active {
+            background: var(--color-primary);
+            color: white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- TOGGLE BAHASA KANAN ATAS -->
+    <div class="lang-toggle-container">
+        <button id="btn-in" class="btn-lang active" onclick="setLanguage('IN')">IN</button>
+        <button id="btn-en" class="btn-lang" onclick="setLanguage('EN')">EN</button>
+    </div>
+
+    <div id="game-container">
+        <header>
+            <h2 data-i18n="headerTitle">Laboratorium Kimia Fisika: Preparasi Larutan</h2>
+            <div style="font-size: 0.9em; opacity: 0.8;" data-i18n="headerSubtitle">Modul: Pengenceran Sari Jeruk 10% v/v</div>
+        </header>
+        
+        <div id="instruction-bar" data-i18n="loading">Memuat simulasi...</div>
+
+        <!-- SCENE 1: PASAR -->
+        <div id="scene-market" class="scene">
+            <div class="market-shelf">
+                <div class="item-market" style="background-image: var(--img-apel), url('https://via.placeholder.com/120/FF0000/FFFFFF?text=Apel');" onclick="handleMarketClick('wrong')"></div>
+                <div class="item-market" style="background-image: var(--img-jeruk-utuh), url('https://via.placeholder.com/120/FFA500/FFFFFF?text=Jeruk');" onclick="handleMarketClick('correct')"></div>
+                <div class="item-market" style="background-image: var(--img-pisang), url('https://via.placeholder.com/120/FFFF00/000000?text=Pisang');" onclick="handleMarketClick('wrong')"></div>
+            </div>
+            <p style="margin-top: 20px; background: rgba(255,255,255,0.9); padding: 8px 15px; border-radius: 8px; font-weight: bold;" data-i18n="marketHint">
+                Klik bahan baku yang mengandung Vitamin C tinggi.
+            </p>
+        </div>
+
+        <!-- SCENE 2: EKSTRAKSI -->
+        <div id="scene-extraction" class="scene">
+            <div class="workbench-panel">
+                <h3 style="text-align: center; margin-bottom: 20px; color: var(--color-primary);" data-i18n="extractionArea">Area Ekstraksi</h3>
+                <div class="workbench">
+                    <div id="slot-kupas" class="tool-slot" onclick="processExtraction(1)">
+                        <div class="tool-icon" id="icon-kupas">🔪</div>
+                        <div class="tool-img img-jeruk-raw" id="img-kupas"></div>
+                        <span data-i18n="peelOrange">1. Kupas Jeruk</span>
+                    </div>
+                    <div id="slot-peras" class="tool-slot disabled" onclick="processExtraction(2)">
+                        <div class="tool-icon" id="icon-peras" style="opacity: 0;">🍊</div>
+                        <div class="tool-img img-perasan" id="img-peras"></div>
+                        <span data-i18n="squeezeOrange">2. Peras Bulir</span>
+                    </div>
+                    <div id="slot-saring" class="tool-slot disabled" onclick="processExtraction(3)">
+                        <div class="tool-icon" id="icon-saring" style="opacity: 0;">🧪</div>
+                        <div class="tool-img img-saringan" id="img-saring"></div>
+                        <span data-i18n="filterOrange">3. Saring Ampas</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SCENE 3: PENGENCERAN -->
+        <div id="scene-dilution" class="scene">
+            <div class="dilution-container">
+                <h3 data-i18n="dilutionTitle">Hitung Formulasi 10% v/v</h3>
+                <p style="font-size: 0.9em; margin-bottom: 20px; color: #666;" data-i18n="dilutionDesc">
+                    Masukkan volume Sari Jeruk dan volume Aqua DM untuk membuat larutan 10% v/v.
+                </p>
+                <div class="chemical-input">
+                    <div class="chemical-icon" style="background-image: var(--img-gelas-sari-jernih), url('https://via.placeholder.com/50/FFA500/FFFFFF?text=Sari');"></div>
+                    <label data-i18n="volSolute">Volume Sari Jeruk (mL):</label>
+                    <input type="number" id="input-solute" placeholder="0">
+                </div>
+                <div class="chemical-input">
+                    <div class="chemical-icon" style="background-image: var(--img-botol-aquadm), url('https://via.placeholder.com/50/E0FFFF/000000?text=Aqua');"></div>
+                    <label data-i18n="volSolvent">Volume Aqua DM (mL):</label>
+                    <input type="number" id="input-solvent" placeholder="0">
+                </div>
+                <div style="margin: 15px 0; font-weight: bold; color: var(--color-primary); font-size: 1.1em;">
+                    <span data-i18n="totalVol">Total Volume: </span><span id="total-volume-display">0</span> mL
+                </div>
+                <button class="btn-action" onclick="checkDilution()" data-i18n="mixBtn">Campurkan Larutan</button>
+            </div>
+        </div>
+
+        <!-- SCENE 4: PENYIMPANAN & HOMOGENISASI -->
+        <div id="scene-storage" class="scene">
+            
+            <!-- Tahap 1: Homogenisasi (Goyang Botol) -->
+            <div id="homogen-content" style="text-align: center;">
+                <div id="botol-campur" class="tool-img" style="background-image: var(--img-labu-campur), url('https://via.placeholder.com/120/FFA500/FFFFFF?text=Botol+Campur'); width: 120px; height: 160px; margin: 0 auto;"></div>
+                <p id="homogen-status" style="margin-top: 30px; font-weight: bold; color: var(--color-accent); background:rgba(255,255,255,0.8); padding: 5px 15px; border-radius: 5px;" data-i18n="homogenStart">Memulai proses homogenisasi...</p>
+                <button id="btn-to-pour" class="btn-action" style="display:none; margin: 20px auto 0;" onclick="setupPouring()" data-i18n="btnToPour">Lanjut Simpan ke Botol</button>
+            </div>
+
+            <!-- Tahap 2: Animasi Interaktif Menuang Air -->
+            <div id="pour-interactive-area" style="display: none; width: 100%; align-items: center; flex-direction: column;">
+                
+                <div class="slider-container" id="control-panel">
+                    <label for="pour-slider" style="font-weight: bold; display:block; margin-bottom: 5px;" data-i18n="pourHint">Geser untuk membidik lubang botol:</label>
+                    <input type="range" id="pour-slider" min="0" max="150" value="50">
+                    <button id="btn-execute-pour" class="btn-action" style="width: 100%; margin-top: 15px;" onclick="executePour()" data-i18n="btnPour">Tuangkan Sekarang!</button>
+                </div>
+
+                <div style="position: relative; width: 350px; height: 250px; margin-top: 30px; background: rgba(255,255,255,0.3); border-radius: 10px;">
+                    <div id="pour-mover" style="position: absolute; top: 10px; left: 50px; width: 100px; height: 200px; z-index: 10;">
+                        <div id="pour-beaker" class="tool-img" style="background-image: var(--img-gelas-ukur-isi), url('https://via.placeholder.com/80/FFA500/FFFFFF?text=Gelas'); width: 80px; height: 100px; position: absolute; top: 0; left: 0;"></div>
+                        <div id="pour-stream" style="position: absolute; left: 75px; top: 80px; width: 12px; background: rgba(255,165,0,0.8); height: 0; opacity: 0; border-radius: 5px;"></div>
+                    </div>
+                    <div id="pour-bottle" class="tool-img" style="background-image: var(--img-botol-simpan), url('https://via.placeholder.com/90/8B4513/FFFFFF?text=Botol+Gelap'); position: absolute; bottom: 10px; left: 180px; width: 90px; height: 140px; z-index: 5;"></div>
+                </div>
+            </div>
+
+            <!-- Tahap 3: Selesai -->
+            <div id="final-product" style="display: none; text-align: center; background: rgba(255,255,255,0.9); padding: 30px; border-radius: 15px;">
+                <div class="tool-img" style="background-image: var(--img-botol-simpan), url('https://via.placeholder.com/120/8B4513/FFFFFF?text=Botol+Gelap'); width: 120px; height: 180px; margin: 0 auto;"></div>
+                <h3 style="margin-top: 15px; color: var(--color-success);" data-i18n="finalTitle">Praktikum Selesai!</h3>
+                <p data-i18n="finalDesc">Larutan Jeruk 10% berhasil dihomogenkan dan disimpan di botol simpan.</p>
+                <button class="btn-action" onclick="location.reload()" data-i18n="btnRetry">Ulangi Simulasi</button>
+            </div>
+        </div>
+
+        <!-- MODAL -->
+        <div id="feedback-modal">
+            <h3 id="modal-title" data-i18n="modalTitle">Info</h3>
+            <p id="modal-msg" data-i18n="modalMsg">Pesan...</p>
+            <button onclick="closeModal()" data-i18n="btnModalClose">Tutup</button>
+        </div>
+    </div>
+
+    <script>
+        // --- DATA BAHASA (BILINGUAL) ---
+        const translations = {
+            IN: {
+                title: "Simulasi Preparasi Larutan Jeruk 10%",
+                headerTitle: "Laboratorium Kimia Fisika: Preparasi Larutan",
+                headerSubtitle: "Modul: Pengenceran Sari Jeruk 10% v/v",
+                loading: "Memuat simulasi...",
+                marketHint: "Klik bahan baku yang mengandung Vitamin C tinggi.",
+                extractionArea: "Area Ekstraksi",
+                peelOrange: "1. Kupas Jeruk",
+                squeezeOrange: "2. Peras Bulir",
+                filterOrange: "3. Saring Ampas",
+                dilutionTitle: "Hitung Formulasi 10% v/v",
+                dilutionDesc: "Masukkan volume Sari Jeruk dan volume Aqua DM untuk membuat larutan 10% v/v.",
+                volSolute: "Volume Sari Jeruk (mL):",
+                volSolvent: "Volume Aqua DM (mL):",
+                totalVol: "Total Volume: ",
+                mixBtn: "Campurkan Larutan",
+                homogenStart: "Memulai proses homogenisasi...",
+                btnToPour: "Lanjut Simpan ke Botol",
+                pourHint: "Geser untuk membidik lubang botol:",
+                btnPour: "Tuangkan Sekarang!",
+                finalTitle: "Praktikum Selesai!",
+                finalDesc: "Larutan Jeruk 10% berhasil dihomogenkan dan disimpan di botol simpan.",
+                btnRetry: "Ulangi Simulasi",
+                btnModalClose: "Tutup",
+                modalTitle: "Info",
+                modalMsg: "Pesan...",
+                
+                // --- Teks Dinamis ---
+                instScene1: "SCENE 1: PASAR - Cari bahan baku utama tinggi Vitamin C.",
+                instScene2: "SCENE 2: EKSTRAKSI - Olah buah menjadi sari murni.",
+                instScene3: "SCENE 3: PENGENCERAN - Buat larutan 10% v/v.",
+                instScene4: "SCENE 4: PENYIMPANAN - Homogenkan campuran larutan.",
+                instPeeling: "Mengupas kulit jeruk...",
+                instPeeled: "Selesai dikupas. Lanjut memeras.",
+                instSqueezing: "Memeras sari jeruk...",
+                instSqueezed: "Sari keruh didapat. Lakukan penyaringan.",
+                instFiltering: "Menyaring ampas...",
+                instFiltered: "Sari murni berhasil didapat.",
+                instPourSetup: "Atur posisi jatuhnya air agar masuk tepat ke dalam botol simpan.",
+                instPouring: "Menuangkan...",
+                instPourSuccess: "SIMULASI SELESAI",
+                instPourFail: "Gagal. Atur ulang posisi dan coba lagi.",
+                correctMarketTitle: "Benar!",
+                correctMarketMsg: "Jeruk mengandung Vitamin C dan cocok untuk sediaan ini.",
+                wrongMarketTitle: "Salah",
+                wrongMarketMsg: "Bahan ini kurang tepat untuk modul Jeruk.",
+                extDoneTitle: "Ekstraksi Selesai",
+                extDoneMsg: "Sari Jeruk Murni siap. Mari encerkan.",
+                errDataTitle: "Data Kurang",
+                errDataMsg: "Harap isi kedua volume.",
+                dilutionSuccessTitle: "Formula Tepat!",
+                dilutionSuccessMsg: "Larutan 10% berhasil diukur.",
+                dilutionWrongTitle: "Konsentrasi Salah",
+                pourFailTitle: "Yahh, Tumpah!",
+                pourFailMsg: "Posisi bidikan kurang pas, air tumpah ke meja. Silakan geser slider dan coba tuang lagi.",
+                homogenizing: "Botol sedang digoyangkan untuk menghomogenkan...",
+                homogenDone: "Larutan sudah Homogen!",
+                hintSolvent: "Tambahkan pelarut (Aqua DM).",
+                hintSolute: "Kurangi pelarut/Tambah Sari.",
+                getDilutionError: (calc, hintKey) => `Hitungan Anda: ${calc}%. Target 10%.\nSaran: ${translations['IN'][hintKey]}`
+            },
+            EN: {
+                title: "10% Orange Solution Preparation Simulation",
+                headerTitle: "Physical Chemistry Lab: Solution Preparation",
+                headerSubtitle: "Module: 10% v/v Orange Juice Dilution",
+                loading: "Loading simulation...",
+                marketHint: "Click the raw material containing high Vitamin C.",
+                extractionArea: "Extraction Area",
+                peelOrange: "1. Peel Orange",
+                squeezeOrange: "2. Squeeze Juice",
+                filterOrange: "3. Filter Pulp",
+                dilutionTitle: "Calculate 10% v/v Formulation",
+                dilutionDesc: "Enter the volume of Orange Juice and Aqua DM to make a 10% v/v solution.",
+                volSolute: "Orange Juice Vol (mL):",
+                volSolvent: "Aqua DM Vol (mL):",
+                totalVol: "Total Volume: ",
+                mixBtn: "Mix Solution",
+                homogenStart: "Starting homogenization process...",
+                btnToPour: "Continue to Store in Bottle",
+                pourHint: "Slide to aim at the bottle opening:",
+                btnPour: "Pour Now!",
+                finalTitle: "Practicum Completed!",
+                finalDesc: "The 10% Orange solution has been successfully homogenized and stored.",
+                btnRetry: "Repeat Simulation",
+                btnModalClose: "Close",
+                modalTitle: "Info",
+                modalMsg: "Message...",
+                
+                // --- Teks Dinamis ---
+                instScene1: "SCENE 1: MARKET - Find the main ingredient high in Vitamin C.",
+                instScene2: "SCENE 2: EXTRACTION - Process the fruit into pure juice.",
+                instScene3: "SCENE 3: DILUTION - Make a 10% v/v solution.",
+                instScene4: "SCENE 4: STORAGE - Homogenize the mixed solution.",
+                instPeeling: "Peeling the orange...",
+                instPeeled: "Peeling done. Continue to squeeze.",
+                instSqueezing: "Squeezing the orange juice...",
+                instSqueezed: "Cloudy juice obtained. Proceed with filtering.",
+                instFiltering: "Filtering the pulp...",
+                instFiltered: "Pure juice successfully obtained.",
+                instPourSetup: "Adjust the water drop position so it goes right into the bottle.",
+                instPouring: "Pouring...",
+                instPourSuccess: "SIMULATION COMPLETE",
+                instPourFail: "Failed. Reset position and try again.",
+                correctMarketTitle: "Correct!",
+                correctMarketMsg: "Oranges contain Vitamin C and are suitable for this preparation.",
+                wrongMarketTitle: "Incorrect",
+                wrongMarketMsg: "This ingredient is not suitable for the Orange module.",
+                extDoneTitle: "Extraction Complete",
+                extDoneMsg: "Pure Orange Juice is ready. Let's dilute.",
+                errDataTitle: "Incomplete Data",
+                errDataMsg: "Please fill in both volumes.",
+                dilutionSuccessTitle: "Exact Formula!",
+                dilutionSuccessMsg: "The 10% solution has been successfully measured.",
+                dilutionWrongTitle: "Incorrect Concentration",
+                pourFailTitle: "Oops, Spilled!",
+                pourFailMsg: "Aim is slightly off, the water spilled on the table. Please adjust the slider and try again.",
+                homogenizing: "Shaking the bottle to homogenize...",
+                homogenDone: "Solution is Homogeneous!",
+                hintSolvent: "Add solvent (Aqua DM).",
+                hintSolute: "Reduce solvent/Add Juice.",
+                getDilutionError: (calc, hintKey) => `Your calculation: ${calc}%. Target 10%.\nSuggestion: ${translations['EN'][hintKey]}`
+            }
+        };
+
+        // State Aplikasi
+        const state = { 
+            currentScene: 1, 
+            extractionStep: 0, 
+            isAnimating: false,
+            lang: 'IN',
+            currentInstKey: 'loading',
+            currentStatusKey: '',
+            currentModal: null
+        };
+        
+        const instructionBar = document.getElementById('instruction-bar');
+        const modal = document.getElementById('feedback-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalMsg = document.getElementById('modal-msg');
+        const totalVolDisplay = document.getElementById('total-volume-display');
+
+        // Fungsi Mengubah Bahasa
+        function setLanguage(lang) {
+            state.lang = lang;
+            
+            // Ubah tampilan tombol toggle
+            document.getElementById('btn-in').className = lang === 'IN' ? 'btn-lang active' : 'btn-lang';
+            document.getElementById('btn-en').className = lang === 'EN' ? 'btn-lang active' : 'btn-lang';
+            
+            // Ubah semua elemen HTML statis berdasar atribut data-i18n
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (translations[lang][key]) {
+                    el.textContent = translations[lang][key];
+                }
+            });
+            
+            // Update Teks Dinamis yang sedang tampil
+            if (state.currentInstKey) setInstruction(state.currentInstKey);
+            if (state.currentStatusKey) setStatusText(state.currentStatusKey);
+            
+            // Update Modal jika sedang terbuka
+            if (modal.classList.contains('show') && state.currentModal) {
+                const m = state.currentModal;
+                modalTitle.textContent = translations[lang][m.titleKey];
+                if (m.isDilution) {
+                    modalMsg.textContent = translations[lang].getDilutionError(m.calc, m.hintKey);
+                } else {
+                    modalMsg.textContent = translations[lang][m.msgKey];
+                }
+            }
+        }
+
+        // Fungsi Helper untuk Teks Dinamis
+        function setInstruction(key) {
+            state.currentInstKey = key;
+            instructionBar.textContent = translations[state.lang][key];
+        }
+
+        function setStatusText(key) {
+            state.currentStatusKey = key;
+            const el = document.getElementById('homogen-status');
+            if(el) el.textContent = translations[state.lang][key];
+        }
+
+        function showModal(titleKey, msgKey, isSuccess = false, isDilution = false, calc = 0, hintKey = '') {
+            state.currentModal = { titleKey, msgKey, isSuccess, isDilution, calc, hintKey };
+            modalTitle.textContent = translations[state.lang][titleKey];
+            
+            if (isDilution) {
+                modalMsg.textContent = translations[state.lang].getDilutionError(calc, hintKey);
+            } else {
+                modalMsg.textContent = translations[state.lang][msgKey];
+            }
+            
+            modalTitle.style.color = isSuccess ? 'var(--color-success)' : 'var(--color-error)';
+            modal.classList.add('show');
+        }
+
+        function closeModal() { modal.classList.remove('show'); }
+
+        window.onload = () => { 
+            setLanguage('IN'); // Default ke Bahasa Indonesia
+            switchScene(1); 
+        };
+
+        function switchScene(sceneId) {
+            document.querySelectorAll('.scene').forEach(el => el.classList.remove('active'));
+            state.currentScene = sceneId;
+
+            if(sceneId === 1) {
+                document.getElementById('scene-market').classList.add('active');
+                setInstruction('instScene1');
+            } else if (sceneId === 2) {
+                document.getElementById('scene-extraction').classList.add('active');
+                setInstruction('instScene2');
+            } else if (sceneId === 3) {
+                document.getElementById('scene-dilution').classList.add('active');
+                setInstruction('instScene3');
+                ['input-solute', 'input-solvent'].forEach(id => {
+                    document.getElementById(id).addEventListener('input', () => {
+                        const v1 = parseFloat(document.getElementById('input-solute').value) || 0;
+                        const v2 = parseFloat(document.getElementById('input-solvent').value) || 0;
+                        totalVolDisplay.textContent = v1 + v2;
+                    });
+                });
+            } else if (sceneId === 4) {
+                document.getElementById('scene-storage').classList.add('active');
+                setInstruction('instScene4');
+                setTimeout(startHomogenization, 500); 
+            }
+        }
+
+        // --- SCENE 1 ---
+        function handleMarketClick(type) {
+            if(type === 'correct') {
+                showModal("correctMarketTitle", "correctMarketMsg", true);
+                setTimeout(() => { closeModal(); switchScene(2); }, 1500);
+            } else { showModal("wrongMarketTitle", "wrongMarketMsg"); }
+        }
+
+        // --- SCENE 2 ---
+        function processExtraction(stepClicked) {
+            if (state.isAnimating) return;
+            const sKupas = document.getElementById('slot-kupas'), sPeras = document.getElementById('slot-peras'), sSaring = document.getElementById('slot-saring');
+
+            if (stepClicked === 1 && state.extractionStep === 0) {
+                state.isAnimating = true; setInstruction('instPeeling');
+                sKupas.classList.add('anim-slicing');
+                setTimeout(() => {
+                    sKupas.classList.remove('anim-slicing');
+                    document.getElementById('icon-kupas').style.display = 'none';
+                    document.getElementById('img-kupas').style.backgroundImage = "var(--img-jeruk-kupas), url('https://via.placeholder.com/100/FFD700/FFFFFF?text=Kupas')";
+                    sKupas.classList.add('disabled'); sPeras.classList.remove('disabled');
+                    document.getElementById('icon-peras').style.opacity = '1';
+                    setInstruction('instPeeled');
+                    state.extractionStep = 1; state.isAnimating = false;
+                }, 1500);
+            } 
+            else if (stepClicked === 2 && state.extractionStep === 1) {
+                state.isAnimating = true; setInstruction('instSqueezing');
+                sPeras.classList.add('anim-squishing');
+                setTimeout(() => {
+                    sPeras.classList.remove('anim-squishing');
+                    document.getElementById('icon-peras').style.display = 'none';
+                    document.getElementById('img-peras').style.backgroundImage = "var(--img-gelas-sari-keruh), url('https://via.placeholder.com/100/DAA520/FFFFFF?text=Keruh')";
+                    sPeras.classList.add('disabled'); sSaring.classList.remove('disabled');
+                    document.getElementById('icon-saring').style.opacity = '1';
+                    setInstruction('instSqueezed');
+                    state.extractionStep = 2; state.isAnimating = false;
+                }, 1800);
+            } 
+            else if (stepClicked === 3 && state.extractionStep === 2) {
+                state.isAnimating = true; setInstruction('instFiltering');
+                sSaring.classList.add('anim-shaking');
+                setTimeout(() => {
+                    sSaring.classList.remove('anim-shaking');
+                    document.getElementById('icon-saring').style.display = 'none';
+                    document.getElementById('img-saring').style.backgroundImage = "var(--img-gelas-sari-jernih), url('https://via.placeholder.com/100/FFA500/FFFFFF?text=Jernih')";
+                    setInstruction('instFiltered');
+                    state.extractionStep = 3; state.isAnimating = false;
+                    setTimeout(() => {
+                        showModal("extDoneTitle", "extDoneMsg", true);
+                        setTimeout(() => { closeModal(); switchScene(3); }, 2000);
+                    }, 500);
+                }, 1500);
+            }
+        }
+
+        // --- SCENE 3 ---
+        function checkDilution() {
+            const vZat = parseFloat(document.getElementById('input-solute').value);
+            const vPelarut = parseFloat(document.getElementById('input-solvent').value);
+            if (!vZat || !vPelarut) return showModal("errDataTitle", "errDataMsg");
+
+            const konsentrasi = (vZat / (vZat + vPelarut)) * 100;
+            if (Math.abs(konsentrasi - 10) <= 0.5) {
+                showModal("dilutionSuccessTitle", "dilutionSuccessMsg", true);
+                setTimeout(() => { closeModal(); switchScene(4); }, 2000);
+            } else {
+                let hintKey = konsentrasi > 10 ? "hintSolvent" : "hintSolute";
+                showModal("dilutionWrongTitle", "", false, true, konsentrasi.toFixed(1), hintKey);
+            }
+        }
+
+        // --- SCENE 4: HOMOGENISASI & PENUANGAN INTERAKTIF ---
+        function startHomogenization() {
+            const botol = document.getElementById('botol-campur');
+            const statusText = document.getElementById('homogen-status');
+            const btnNext = document.getElementById('btn-to-pour');
+            
+            setStatusText('homogenizing');
+            
+            botol.classList.add('anim-shake-bottle');
+            botol.classList.add('anim-blending'); 
+
+            setTimeout(() => {
+                botol.classList.remove('anim-shake-bottle');
+                botol.classList.remove('anim-blending');
+                
+                setStatusText('homogenDone');
+                statusText.style.color = "var(--color-success)";
+                btnNext.style.display = 'inline-block';
+            }, 3500);
+        }
+
+        function setupPouring() {
+            document.getElementById('homogen-content').style.display = 'none';
+            document.getElementById('pour-interactive-area').style.display = 'flex';
+            setInstruction('instPourSetup');
+
+            const slider = document.getElementById('pour-slider');
+            const mover = document.getElementById('pour-mover');
+            
+            slider.addEventListener('input', function() {
+                mover.style.left = this.value + 'px';
+            });
+        }
+
+        function executePour() {
+            const sliderValue = parseInt(document.getElementById('pour-slider').value);
+            const btn = document.getElementById('btn-execute-pour');
+            const slider = document.getElementById('pour-slider');
+            const beaker = document.getElementById('pour-beaker');
+            const stream = document.getElementById('pour-stream');
+            
+            btn.disabled = true;
+            slider.disabled = true;
+            setInstruction('instPouring');
+
+            const dropX = sliderValue + 75;
+            const minSafe = 205;
+            const maxSafe = 235;
+            const isSuccess = (dropX >= minSafe && dropX <= maxSafe);
+
+            beaker.classList.add('anim-tilt');
+            stream.classList.add('anim-flow');
+            
+            setTimeout(() => {
+                beaker.classList.remove('anim-tilt');
+                stream.classList.remove('anim-flow');
+                btn.disabled = false;
+                slider.disabled = false;
+
+                if (isSuccess) {
+                    document.getElementById('pour-interactive-area').style.display = 'none';
+                    document.getElementById('final-product').style.display = 'block';
+                    setInstruction('instPourSuccess');
+                } else {
+                    showModal("pourFailTitle", "pourFailMsg");
+                    setInstruction('instPourFail');
+                }
+            }, 3500); 
+        }
+    </script>
+</body>
+</html>

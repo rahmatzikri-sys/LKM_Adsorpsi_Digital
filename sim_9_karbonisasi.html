@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulasi Tahap 3: Karbonisasi & Penghalusan</title>
+    <style>
+        /* =========================================
+           KONFIGURASI PENGGUNA (EDIT DI SINI)
+           ========================================= */
+        :root {
+            /* -------------------------------------- */
+            /* 1. GAMBAR ALAT & BAHAN (Ganti URL-nya) */
+            /* -------------------------------------- */
+            
+            /* --- LATAR BELAKANG --- */
+            --img-meja: url('meja1.png');                  /* Latar belakang meja praktikum */
+
+            /* --- STATE CAWAN/KRUSIBEL (BERUBAH TIAP TAHAP) --- */
+            --img-cawan-kosong: url('cawan_kosong.png');          
+            --img-cawan-isi-mentah: url('cawan_isi_pelepah.png'); 
+            --img-cawan-isi-arang: url('cawan_isi_arang.png');    
+            --img-cawan-isi-serbuk: url('cawan_isi_serbuk.png');  
+
+            /* --- ALAT --- */
+            --img-furnace-tutup: url('furnace_tutup.png'); 
+            --img-furnace-buka: url('furnace_buka.png');   
+            
+            --img-lumpang: url('lumpang1.png');             
+            --img-alu: url('alu1.png');                     
+            
+            --img-ayakan: url('ayakan1.png');
+            --img-desikator: url('desikator.png');
+
+            --img-sendok: url('sendok_spatula.png');       
+            --img-wadah-bahan: url('wadah_pelepah.png');   
+
+            /* --- TEKSTUR BAHAN (Untuk Animasi) --- */
+            --img-bahan-di-sendok: url('sendok_berisi_pelepah.png'); 
+            --img-tumpukan-animasi: url('tumpukan_pelepah_di_cawan.png'); 
+
+            /* -------------------------------------- */
+            /* 2. UKURAN ALAT (Sesuaikan skala px)    */
+            /* -------------------------------------- */
+            --size-furnace: 400px;
+            --size-mortar-set: 280px;
+            --size-ayakan: 240px;
+            --size-desikator: 500px; /* Desikator besar */
+
+            /* -------------------------------------- */
+            /* 3. TATA LETAK & POSISI ANIMASI         */
+            /* -------------------------------------- */
+            --anim-sendok-ambil: 100px; 
+            --anim-sendok-tuang: 420px; 
+            --anim-sendok-tinggi: -60px;
+
+            /* -------------------------------------- */
+            /* 4. WARNA & EFEK LAINNYA                */
+            /* -------------------------------------- */
+            --color-fire-glow: rgba(255, 69, 0, 0.6);
+            --color-dust: #1a1a1a;
+            --bg-lab: #f4f4f9;
+        }
+
+        /* =========================================
+           RESET & STYLE UMUM
+           ========================================= */
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        
+        body {
+            background-color: var(--bg-lab);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        h1 { margin-bottom: 10px; color: #333; text-transform: uppercase; letter-spacing: 1px; font-size: 24px; text-align: center; }
+        .status-bar { 
+            background: #fff; padding: 10px 20px; border-radius: 20px; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; 
+            font-weight: bold; color: #555; min-width: 300px; text-align: center;
+            border: 2px solid transparent;
+            transition: all 0.3s;
+        }
+        .status-bar.warning { border-color: #ff9800; color: #e65100; background: #fff3e0; }
+        .status-bar.success { border-color: #4caf50; color: #1b5e20; background: #e8f5e9; }
+
+        .stage-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            max-width: 1000px;
+            height: 500px;
+            position: relative;
+            
+            /* -- PERUBAHAN BACKGROUND MEJA DI SINI -- */
+            background-color: #fff;
+            background-image: var(--img-meja);
+            background-size: cover; /* Agar gambar menutupi seluruh area */
+            background-position: center bottom; /* Fokus pada bagian bawah gambar (permukaan meja) */
+            background-repeat: no-repeat;
+            
+            border: 2px solid #e0e0e0;
+            border-radius: 15px;
+            overflow: hidden; 
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.05); /* Sedikit bayangan di dalam */
+        }
+
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 15px;
+        }
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: transform 0.2s, background 0.3s;
+        }
+        .btn-action { background: #2196F3; color: white; }
+        .btn-action:hover { background: #1976D2; transform: scale(1.05); }
+        .btn-action:disabled { background: #ccc; cursor: not-allowed; transform: none; }
+        .btn-reset { background: #FF5722; color: white; }
+        .btn-secondary { background: #607d8b; color: white; } 
+
+        /* =========================================
+           LANGUAGE TOGGLE BUTTON
+           ========================================= */
+        .lang-toggle {
+            position: fixed;
+            top: 18px;
+            right: 20px;
+            display: flex;
+            gap: 4px;
+            z-index: 9999;
+            background: #fff;
+            border-radius: 10px;
+            padding: 4px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        .lang-btn {
+            padding: 6px 14px;
+            border: none;
+            border-radius: 7px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: bold;
+            background: transparent;
+            color: #888;
+            transition: background 0.2s, color 0.2s, transform 0.1s;
+        }
+        .lang-btn:hover { transform: none; }
+        .lang-btn.active {
+            background: #2196F3;
+            color: #fff;
+        }
+
+        .scene {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: none; 
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+        .scene.active { display: flex; opacity: 1; }
+
+        /* =========================================
+           TRIK TRANSPARANSI 
+           ========================================= */
+        .force-transparent {
+            mix-blend-mode: multiply;
+            filter: brightness(1.08) contrast(1.05); 
+        }
+
+        .placeholder-box {
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            position: relative;
+        }
+        .placeholder-box::after { content: none; }
+
+        /* --- SCENE 0: PREPARATION (FILLING) --- */
+        .prep-table {
+            width: 80%; height: 60%;
+            position: relative;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            padding-bottom: 50px;
+        }
+        .source-container {
+            width: 220px; height: 180px;
+            background-image: var(--img-wadah-bahan);
+            position: relative;
+        }
+        /* Cawan Target */
+        .target-cawan {
+            width: 220px; height: 130px;
+            background-image: var(--img-cawan-kosong); 
+            position: relative;
+            margin-right: 20px;
+            transition: background-image 0.5s;
+        }
+        .cawan-fill {
+            position: absolute;
+            bottom: 30px; left: 10%; width: 80%;
+            height: 0%; 
+            max-height: 80px; 
+            background-image: var(--img-tumpukan-animasi);
+            background-size: cover;
+            background-position: bottom center;
+            transition: height 0.5s ease-out, opacity 0.5s;
+            opacity: 0.9;
+            z-index: 5;
+        }
+        .fill-indicator {
+            position: absolute;
+            right: -40px; top: 0; bottom: 0;
+            width: 10px; background: rgba(238, 238, 238, 0.8);
+            border-radius: 5px;
+            display: flex; flex-direction: column-reverse;
+        }
+        .fill-level-bar {
+            width: 100%; height: 0%;
+            background: #4caf50;
+            transition: height 0.3s;
+            border-radius: 5px;
+        }
+
+        /* Sendok Animasi */
+        .spoon {
+            width: 220px; height: 80px; 
+            background-image: var(--img-sendok);
+            background-size: contain;
+            background-repeat: no-repeat;
+            position: absolute;
+            top: 0; 
+            left: var(--anim-sendok-ambil); 
+            z-index: 20;
+            transform-origin: center right;
+            transition: background-image 0s; 
+        }
+        
+        @keyframes scoopAnimation {
+            0% { top: 0; left: var(--anim-sendok-ambil); transform: rotate(0deg); }
+            20% { top: 40px; left: var(--anim-sendok-ambil); transform: rotate(-30deg); } 
+            30% { top: 40px; left: var(--anim-sendok-ambil); transform: rotate(-30deg); } 
+            50% { top: var(--anim-sendok-tinggi); left: var(--anim-sendok-ambil); transform: rotate(0deg); } 
+            70% { top: var(--anim-sendok-tinggi); left: var(--anim-sendok-tuang); transform: rotate(0deg); } 
+            85% { top: 20px; left: var(--anim-sendok-tuang); transform: rotate(45deg); } 
+            100% { top: 0; left: var(--anim-sendok-ambil); transform: rotate(0deg); } 
+        }
+        
+        .scooping .spoon { animation: scoopAnimation 2s ease-in-out forwards; }
+
+        /* --- SCENE 1: FURNACE (KARBONISASI) --- */
+        .furnace-wrapper { width: var(--size-furnace); height: var(--size-furnace); position: relative; }
+        .furnace-body {
+            width: 100%; height: 100%; position: absolute;
+            background-image: var(--img-furnace-tutup); z-index: 10;
+            transition: background-image 0.3s;
+        }
+        .furnace-body.open { background-image: var(--img-furnace-buka); }
+        .furnace-panel {
+            position: absolute; top: 20px; left: 20px;
+            background: rgba(255,255,255,0.95); padding: 15px; border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 100; width: 200px;
+        }
+        .furnace-panel label { display: block; font-size: 12px; font-weight: bold; margin-bottom: 5px; color: #444; }
+        .furnace-panel input[type="number"], .furnace-panel input[type="range"] { width: 100%; margin-bottom: 10px; }
+        .digital-readout {
+            position: absolute; top: -40px; right: 0; background: #222; color: #0f0;
+            font-family: 'Courier New', monospace; padding: 5px 10px; border-radius: 4px; border: 2px solid #555;
+            display: flex; gap: 10px; font-size: 14px;
+        }
+        .temp-val { color: #ff5722; } 
+        .fire-container {
+            position: absolute; top: 25%; left: 25%; right: 25%; bottom: 25%;
+            z-index: 5; opacity: 0; transition: opacity 1s; mix-blend-mode: screen;
+            overflow: hidden; border-radius: 50%;
+        }
+        .heating .fire-container { opacity: 1; }
+        .flame {
+            position: absolute; bottom: 0; left: 0; right: 0; top: 0;
+            background: radial-gradient(circle, rgba(255,200,0,0.8) 10%, rgba(255,50,0,0.6) 40%, transparent 70%);
+            transform-origin: center bottom;
+        }
+        .flame.core { animation: flicker 0.1s infinite alternate; background: radial-gradient(circle, #fff 0%, #ffeb3b 20%, transparent 60%); z-index: 6; }
+        .flame.mid { animation: flicker 0.2s infinite alternate-reverse; opacity: 0.7; }
+        .flame.outer { animation: flicker 0.4s infinite alternate; opacity: 0.5; background: radial-gradient(circle, #ff5722 0%, transparent 70%); }
+
+        /* Cawan Furnace */
+        .cawan-group {
+            width: 160px; height: 100px; position: absolute;
+            bottom: -50px; left: 50%; transform: translateX(-50%);
+            transition: bottom 1.2s ease-in-out, transform 1.2s ease-in-out, opacity 0.3s ease; 
+            z-index: 15;
+            opacity: 1;
+        }
+        .cawan-img { width: 100%; height: 100%; background-image: var(--img-cawan-isi-mentah); position: absolute; }
+        .cawan-group.inside { bottom: 35%; transform: translateX(-50%) scale(0.85); z-index: 8; }
+
+        /* --- SCENE 2 & 3 & 4 (GRINDING, SIFTING, STORAGE) --- */
+        .mortar-wrapper { width: var(--size-mortar-set); height: var(--size-mortar-set); position: relative; }
+        .lumpang { width: 100%; height: 80%; position: absolute; bottom: 0; background-image: var(--img-lumpang); z-index: 5; }
+        .alu {
+            width: 40%; height: 80%; position: absolute; top: -20%; right: 20%;
+            background-image: var(--img-alu); background-size: contain; background-repeat: no-repeat;
+            z-index: 10; transform-origin: bottom center;
+        }
+        .grinding .alu { animation: grindAction 0.6s infinite linear; }
+        
+        .sieve-wrapper { width: var(--size-ayakan); height: var(--size-ayakan); position: relative; margin-bottom: 50px; }
+        .ayakan { width: 100%; height: 100%; background-image: var(--img-ayakan); position: relative; z-index: 10; }
+        .shaking .ayakan { animation: shakeAction 0.1s infinite; }
+        .penampung-bawah {
+            width: 160px; height: 100px; 
+            background-image: var(--img-cawan-isi-serbuk);
+            background-size: contain; background-position: center bottom; background-repeat: no-repeat;
+            position: absolute; bottom: -90px; left: 50%; transform: translateX(-50%);
+        }
+
+        .desiccator-wrapper { width: var(--size-desikator); height: var(--size-desikator); position: relative; }
+        .desiccator { width: 100%; height: 100%; background-image: var(--img-desikator); opacity: 0.9; z-index: 10; position: absolute;}
+        
+        /* Animasi Masuk Desikator */
+        .final-product {
+            position: absolute; 
+            top: -50px; 
+            left: 50%; transform: translateX(-50%);
+            width: 160px; height: 100px; 
+            background-image: var(--img-cawan-isi-serbuk);
+            background-size: contain; background-repeat: no-repeat;
+            z-index: 5; 
+            opacity: 0;
+            transition: all 1.5s ease-in-out;
+        }
+        .final-product.stored {
+            top: 55%; 
+            left: 50%;
+            transform: translate(-50%, -50%); 
+            opacity: 1;
+        }
+
+        /* --- ANIMATIONS --- */
+        @keyframes flicker { 0% { transform: scale(1); opacity: 0.8; } 50% { transform: scale(1.05); opacity: 1; } 100% { transform: scale(0.98); opacity: 0.9; } }
+        @keyframes grindAction { 0% { transform: rotate(0deg) translateY(0); } 25% { transform: rotate(-15deg) translateY(10px); } 50% { transform: rotate(0deg) translateY(20px) scaleY(0.9); } 75% { transform: rotate(15deg) translateY(10px); } 100% { transform: rotate(0deg) translateY(0); } }
+        @keyframes shakeAction { 0% { transform: translateX(0); } 25% { transform: translateX(-5px) rotate(-2deg); } 75% { transform: translateX(5px) rotate(2deg); } 100% { transform: translateX(0); } }
+        .particle { position: absolute; background: var(--color-dust); border-radius: 50%; pointer-events: none; opacity: 0.8; }
+
+    </style>
+</head>
+<body>
+
+    <!-- LANGUAGE TOGGLE -->
+    <div class="lang-toggle">
+        <button class="lang-btn active" id="btnLangIN" onclick="setLang('id')">IN</button>
+        <button class="lang-btn" id="btnLangEN" onclick="setLang('en')">EN</button>
+    </div>
+
+    <h1 id="mainTitle">Simulasi Pembuatan Karbon</h1>
+    <div class="status-bar" id="statusText">Tahap 1: Persiapan Bahan Baku</div>
+
+    <!-- MAIN STAGE -->
+    <div class="stage-container">
+
+        <!-- SCENE 0: PREPARATION (FILLING) -->
+        <div class="scene active" id="scene0">
+            <div class="prep-table">
+                <!-- Wadah Bahan Mentah -->
+                <div class="source-container placeholder-box force-transparent">
+                    <div class="spoon placeholder-box force-transparent" id="spoonObj"></div>
+                </div>
+
+                <!-- Cawan Target -->
+                <div class="target-cawan placeholder-box force-transparent" id="prepCawan">
+                    <div class="cawan-fill force-transparent" id="cawanFill"></div>
+                    <div class="fill-indicator">
+                        <div class="fill-level-bar" id="fillBar"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- SCENE 1: FURNACE -->
+        <div class="scene" id="scene1">
+            <div class="furnace-panel">
+                <label id="labelSetTemp">Set Suhu (°C): <span id="labelTemp">500</span>°C</label>
+                <input type="range" id="inputTemp" min="100" max="1000" value="500" step="50" oninput="updateTempDisplay(this.value)">
+                
+                <label id="labelSetTime">Set Waktu (Jam):</label>
+                <input type="number" id="inputTime" value="5" min="1" max="24">
+            </div>
+
+            <div class="furnace-wrapper placeholder-box">
+                <div class="digital-readout"> <span id="displayTemp" class="temp-val">25°C</span> | <span id="displayTimer">00:00</span> </div>
+                <div class="fire-container" id="fireEffect">
+                    <div class="flame core"></div> <div class="flame mid"></div> <div class="flame outer"></div>
+                </div>
+                
+                <div class="furnace-body placeholder-box force-transparent" id="furnaceBody"></div>
+                <div class="cawan-group" id="cawanGroup">
+                    <div class="cawan-img placeholder-box force-transparent" id="furnaceCawan"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SCENE 2: GRINDING -->
+        <div class="scene" id="scene2">
+            <div class="mortar-wrapper placeholder-box">
+                <div class="lumpang placeholder-box force-transparent"></div>
+                <div class="alu placeholder-box force-transparent" id="aluObj"></div>
+                <div id="grindParticleOrigin" style="position:absolute; bottom:30px; left:50%; width:10px; height:10px;"></div>
+            </div>
+        </div>
+
+        <!-- SCENE 3: SIFTING -->
+        <div class="scene" id="scene3">
+            <div class="sieve-wrapper placeholder-box" id="sieveWrapper">
+                <div class="ayakan placeholder-box force-transparent"></div>
+                <!-- Elemen penampung-bawah langsung menggunakan cawan_isi_serbuk -->
+                <div class="penampung-bawah force-transparent"></div>
+            </div>
+        </div>
+
+        <!-- SCENE 4: STORAGE -->
+        <div class="scene" id="scene4">
+            <div class="desiccator-wrapper placeholder-box">
+                <div class="desiccator placeholder-box force-transparent"></div>
+                <!-- CAWAN ARANG FINAL (DI TENGGAH) -->
+                <div class="final-product force-transparent" id="finalProduct"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- CONTROLS -->
+    <div class="controls">
+        <button class="btn-secondary" id="btnScoop" onclick="scoopMaterial()">Ambil Bahan</button>
+        <button class="btn-action" id="mainBtn" onclick="nextStep()" disabled>Lanjut ke Furnace</button>
+        <button class="btn-reset" onclick="location.reload()" id="btnReset">Reset</button>
+    </div>
+
+    <script>
+        // === TERJEMAHAN / TRANSLATIONS ===
+        const translations = {
+            id: {
+                pageTitle: "Simulasi Pembuatan Karbon",
+                btnScoop: "Ambil Bahan",
+                btnReset: "Reset",
+                btnToFurnace: "Lanjut ke Furnace",
+                btnStartHeat: "Mulai Pemanasan",
+                btnToGrind: "Lanjut ke Penghalusan",
+                btnToSift: "Lanjut ke Pengayakan",
+                btnToStore: "Simpan di Desikator",
+                labelSetTemp: "Set Suhu (°C):",
+                labelSetTime: "Set Waktu (Jam):",
+                status_init: "Tahap 1: Persiapan Bahan Baku",
+                status_tooLittle: (fill, min) => `Cawan masih kurang (${fill}/${min} sendok). Tambahkan lagi!`,
+                status_ready: (fill) => `Isi cawan sudah cukup (${fill} sendok). Siap dibakar.`,
+                status_tooFull: "Terlalu penuh! Cawan bisa pecah saat pemanasan.",
+                status_furnaceReady: "Siapkan Furnace. Atur suhu dan waktu.",
+                status_furnaceStart: (temp, hours) => `Menyiapkan Furnace pada ${temp}°C selama ${hours} Jam...`,
+                status_carbonizing: "Proses Karbonisasi Berlangsung...",
+                status_cooling: "Selesai. Mendinginkan...",
+                status_sampleReady: "Sampel Arang Siap.",
+                status_grinding: "Menggerus Arang Menjadi Serbuk...",
+                status_grindDone: "Proses Penggerusan Selesai.",
+                status_sifting: "Mengayak Serbuk...",
+                status_siftDone: "Pengayakan Selesai. Serbuk Halus Didapat.",
+                status_storing: "Memasukkan sampel ke dalam Desikator (Bebas Uap Air)...",
+                status_storeDone: "Tahap 3 Selesai! Arang halus tersimpan dengan aman.",
+                timer_unit: "JAM",
+                cooling_label: "COOLING"
+            },
+            en: {
+                pageTitle: "Carbon Production Simulation",
+                btnScoop: "Take Material",
+                btnReset: "Reset",
+                btnToFurnace: "Proceed to Furnace",
+                btnStartHeat: "Start Heating",
+                btnToGrind: "Proceed to Grinding",
+                btnToSift: "Proceed to Sifting",
+                btnToStore: "Store in Desiccator",
+                labelSetTemp: "Set Temperature (°C):",
+                labelSetTime: "Set Duration (Hours):",
+                status_init: "Stage 1: Raw Material Preparation",
+                status_tooLittle: (fill, min) => `Crucible not full enough (${fill}/${min} scoops). Add more!`,
+                status_ready: (fill) => `Crucible filled sufficiently (${fill} scoops). Ready to burn.`,
+                status_tooFull: "Too full! Crucible may crack during heating.",
+                status_furnaceReady: "Prepare the Furnace. Set temperature and duration.",
+                status_furnaceStart: (temp, hours) => `Preparing Furnace at ${temp}°C for ${hours} Hours...`,
+                status_carbonizing: "Carbonization Process Underway...",
+                status_cooling: "Done. Cooling down...",
+                status_sampleReady: "Charcoal Sample Ready.",
+                status_grinding: "Grinding Charcoal into Powder...",
+                status_grindDone: "Grinding Process Complete.",
+                status_sifting: "Sifting Powder...",
+                status_siftDone: "Sifting Complete. Fine Powder Obtained.",
+                status_storing: "Placing sample into Desiccator (Moisture-Free)...",
+                status_storeDone: "Stage 3 Complete! Fine charcoal stored safely.",
+                timer_unit: "HRS",
+                cooling_label: "COOLING"
+            }
+        };
+
+        let currentLang = 'id';
+
+        function setLang(lang) {
+            currentLang = lang;
+
+            // Toggle active button style
+            document.getElementById('btnLangIN').classList.toggle('active', lang === 'id');
+            document.getElementById('btnLangEN').classList.toggle('active', lang === 'en');
+
+            const t = translations[lang];
+
+            // Static UI labels
+            document.getElementById('mainTitle').innerText = t.pageTitle;
+            document.getElementById('btnScoop').innerText = t.btnScoop;
+            document.getElementById('btnReset').innerText = t.btnReset;
+
+            // Furnace panel labels
+            const labelSetTemp = document.getElementById('labelSetTemp');
+            if (labelSetTemp) {
+                labelSetTemp.childNodes[0].nodeValue = t.labelSetTemp + ' ';
+            }
+            document.getElementById('labelSetTime').innerText = t.labelSetTime;
+
+            // Re-render current status based on state
+            refreshStatus();
+
+            // Re-render mainBtn text based on current stage
+            refreshMainBtn();
+        }
+
+        function refreshStatus() {
+            const t = translations[currentLang];
+            const s = statusText;
+
+            if (currentStage === 0) {
+                if (fillCount === 0) {
+                    s.innerText = t.status_init;
+                    s.classList.remove('warning', 'success');
+                } else if (fillCount < MIN_FILL) {
+                    s.innerText = t.status_tooLittle(fillCount, MIN_FILL);
+                    s.classList.remove('success'); s.classList.add('warning');
+                } else if (fillCount <= MAX_FILL) {
+                    s.innerText = t.status_ready(fillCount);
+                    s.classList.remove('warning'); s.classList.add('success');
+                } else {
+                    s.innerText = t.status_tooFull;
+                    s.classList.remove('success'); s.classList.add('warning');
+                }
+            }
+            // During active animations, status is set dynamically — skip re-render
+        }
+
+        function refreshMainBtn() {
+            const t = translations[currentLang];
+            const btn = mainBtn;
+            if (currentStage === 0) {
+                btn.innerText = t.btnToFurnace;
+            } else if (currentStage === 1) {
+                btn.innerText = t.btnStartHeat;
+            } else if (currentStage === 2) {
+                btn.innerText = t.btnToGrind;
+            } else if (currentStage === 3) {
+                btn.innerText = t.btnToSift;
+            } else if (currentStage === 4) {
+                btn.innerText = t.btnToStore;
+            }
+        }
+
+        // === VARIABEL GLOBAL ===
+        let currentStage = 0; 
+        let isAnimating = false;
+        
+        let fillCount = 0;
+        const MIN_FILL = 3;
+        const MAX_FILL = 5;
+
+        // References
+        const statusText = document.getElementById('statusText');
+        const mainBtn = document.getElementById('mainBtn');
+        const btnScoop = document.getElementById('btnScoop');
+        const spoonObj = document.getElementById('spoonObj');
+        const scenes = [
+            document.getElementById('scene0'),
+            document.getElementById('scene1'),
+            document.getElementById('scene2'),
+            document.getElementById('scene3'),
+            document.getElementById('scene4')
+        ];
+
+        // Init Material Image for Furnace
+        const imgCawanMentah = 'var(--img-cawan-isi-mentah)'; 
+        const imgCawanArang = 'var(--img-cawan-isi-arang)';
+        document.getElementById('furnaceCawan').style.backgroundImage = imgCawanMentah;
+
+        function updateTempDisplay(val) {
+            document.getElementById('labelTemp').innerText = val;
+            document.getElementById('displayTemp').innerText = "SET:" + val + "°C";
+        }
+
+        // === LOGIKA UTAMA ===
+
+        // --- TAHAP 0: PREPARATION (SCOOPING) ---
+        function scoopMaterial() {
+            if (isAnimating) return;
+            isAnimating = true;
+            btnScoop.disabled = true;
+
+            const wrapper = document.querySelector('.prep-table');
+            wrapper.classList.add('scooping');
+
+            setTimeout(() => {
+                spoonObj.style.backgroundImage = "var(--img-bahan-di-sendok)";
+            }, 400);
+
+            setTimeout(() => {
+                spoonObj.style.backgroundImage = "var(--img-sendok)";
+                fillCount++;
+                updateFillVisuals();
+            }, 1600); 
+
+            setTimeout(() => {
+                wrapper.classList.remove('scooping');
+                isAnimating = false;
+                
+                checkFillStatus();
+                if (fillCount <= MAX_FILL + 1) { 
+                   btnScoop.disabled = false;
+                }
+            }, 2000);
+        }
+
+        function updateFillVisuals() {
+            const cawanFill = document.getElementById('cawanFill');
+            const fillBar = document.getElementById('fillBar');
+            
+            let heightPercent = (fillCount / MAX_FILL) * 100;
+            if (heightPercent > 100) heightPercent = 100;
+            
+            cawanFill.style.height = heightPercent + '%';
+            fillBar.style.height = heightPercent + '%';
+            
+            if (fillCount < MIN_FILL) {
+                fillBar.style.background = '#ffeb3b'; 
+            } else if (fillCount <= MAX_FILL) {
+                fillBar.style.background = '#4caf50'; 
+            } else {
+                fillBar.style.background = '#f44336'; 
+            }
+        }
+
+        function checkFillStatus() {
+            const t = translations[currentLang];
+            statusText.classList.remove('warning', 'success');
+            const prepCawan = document.getElementById('prepCawan');
+            const cawanFill = document.getElementById('cawanFill');
+
+            if (fillCount < MIN_FILL) {
+                statusText.innerText = t.status_tooLittle(fillCount, MIN_FILL);
+                statusText.classList.add('warning');
+                mainBtn.disabled = true;
+                prepCawan.style.backgroundImage = "var(--img-cawan-kosong)";
+                cawanFill.style.opacity = "0.9";
+            } else if (fillCount >= MIN_FILL && fillCount <= MAX_FILL) {
+                statusText.innerText = t.status_ready(fillCount);
+                statusText.classList.add('success');
+                mainBtn.disabled = false;
+                mainBtn.innerText = t.btnToFurnace;
+                
+                prepCawan.style.backgroundImage = "var(--img-cawan-isi-mentah)";
+                cawanFill.style.opacity = "0"; 
+            } else {
+                statusText.innerText = t.status_tooFull;
+                statusText.classList.add('warning');
+                mainBtn.disabled = true;
+                btnScoop.disabled = true; 
+            }
+        }
+
+        // --- GLOBAL NEXT STEP CONTROLLER ---
+        function nextStep() {
+            if (isAnimating) return;
+            const t = translations[currentLang];
+
+            if (currentStage === 0) {
+                transitionScene(0, 1);
+                statusText.classList.remove('success');
+                statusText.innerText = t.status_furnaceReady;
+                btnScoop.style.display = 'none'; 
+                mainBtn.innerText = t.btnStartHeat;
+            } else if (currentStage === 1) {
+                processCarbonization();
+            } else if (currentStage === 2) {
+                processGrinding();
+            } else if (currentStage === 3) {
+                processSifting();
+            } else if (currentStage === 4) {
+                processStorage();
+            }
+        }
+
+        // --- TAHAP 1: KARBONISASI ---
+        function processCarbonization() {
+            const t = translations[currentLang];
+            const targetTemp = parseInt(document.getElementById('inputTemp').value);
+            const inputHours = parseInt(document.getElementById('inputTime').value);
+            
+            if(inputHours < 1) { alert("Waktu minimal 1 Jam / Min. 1 Hour"); return; }
+            const simulationSeconds = inputHours; 
+
+            isAnimating = true;
+            mainBtn.disabled = true;
+            statusText.innerText = t.status_furnaceStart(targetTemp, inputHours);
+            
+            const panel = document.querySelector('.furnace-panel');
+            panel.style.display = 'none';
+
+            const furnace = document.getElementById('furnaceBody');
+            const cawan = document.getElementById('cawanGroup');
+            const cawanImg = document.getElementById('furnaceCawan');
+            const wrapper = document.querySelector('.furnace-wrapper');
+            const fireEffect = document.getElementById('fireEffect');
+            const displayTimer = document.getElementById('displayTimer');
+            const displayTemp = document.getElementById('displayTemp');
+
+            // 1. Pintu Furnace Terbuka Dulu
+            furnace.classList.add('open');
+
+            setTimeout(() => {
+                // 2. Cawan Masuk Perlahan
+                cawan.classList.add('inside');
+                
+                setTimeout(() => {
+                    // 3. Pintu Furnace Menutup & CAWAN DISEMBUNYIKAN
+                    cawan.style.opacity = '0'; 
+                    furnace.classList.remove('open');
+                    
+                    statusText.innerText = t.status_carbonizing;
+                    wrapper.classList.add('heating');
+
+                    let opacityVal = targetTemp / 1000;
+                    if(opacityVal < 0.3) opacityVal = 0.3;
+                    fireEffect.style.opacity = opacityVal;
+
+                    let remaining = simulationSeconds;
+                    let currentTemp = 25;
+                    displayTimer.innerText = remaining + ":00 " + t.timer_unit; 
+
+                    const timerInterval = setInterval(() => {
+                        remaining--;
+                        displayTimer.innerText = remaining + ":00 " + t.timer_unit; 
+
+                        if(currentTemp < targetTemp) {
+                            currentTemp += (targetTemp / simulationSeconds); 
+                            if(currentTemp > targetTemp) currentTemp = targetTemp;
+                            displayTemp.innerText = Math.floor(currentTemp) + "°C";
+                        }
+
+                        if (remaining <= 0) {
+                            clearInterval(timerInterval);
+                            
+                            // GANTI GAMBAR KE ARANG SETELAH SELESAI
+                            cawanImg.style.backgroundImage = imgCawanArang;
+                            
+                            wrapper.classList.remove('heating');
+                            fireEffect.style.opacity = 0;
+                            statusText.innerText = t.status_cooling;
+                            displayTemp.innerText = t.cooling_label;
+
+                            setTimeout(() => {
+                                // 4. Pintu Terbuka Dulu & CAWAN DIMUNCULKAN KEMBALI
+                                furnace.classList.add('open');
+                                cawan.style.opacity = '1';
+                                
+                                setTimeout(() => {
+                                    // 5. Cawan (Berisi Arang) Keluar
+                                    cawan.classList.remove('inside');
+                                    statusText.innerText = t.status_sampleReady;
+                                    
+                                    setTimeout(() => {
+                                        // 6. Pintu Ditutup Kembali
+                                        furnace.classList.remove('open'); 
+                                        completeStage(2, t.btnToGrind);
+                                    }, 1200); 
+                                }, 600); 
+                            }, 1500); 
+                        }
+                    }, 1000); 
+                }, 1200); 
+            }, 600); 
+        }
+
+        // --- TAHAP 2: PENGHALUSAN ---
+        function processGrinding() {
+            const t = translations[currentLang];
+            transitionScene(1, 2);
+            statusText.innerText = t.status_grinding;
+            isAnimating = true; mainBtn.disabled = true;
+
+            const wrapper = document.querySelector('.mortar-wrapper');
+            const origin = document.getElementById('grindParticleOrigin');
+            wrapper.classList.add('grinding');
+
+            let particleInterval = setInterval(() => { spawnParticle(origin, 'up'); }, 100);
+
+            setTimeout(() => {
+                clearInterval(particleInterval);
+                wrapper.classList.remove('grinding');
+                statusText.innerText = t.status_grindDone;
+                completeStage(3, t.btnToSift);
+            }, 4000);
+        }
+
+        // --- TAHAP 3: PENGAYAKAN ---
+        function processSifting() {
+            const t = translations[currentLang];
+            transitionScene(2, 3);
+            statusText.innerText = t.status_sifting;
+            isAnimating = true; mainBtn.disabled = true;
+
+            const wrapper = document.querySelector('.sieve-wrapper');
+            const sieveBox = document.getElementById('sieveWrapper');
+
+            wrapper.classList.add('shaking');
+
+            let particleInterval = setInterval(() => {
+                let rect = sieveBox.getBoundingClientRect();
+                let dummy = document.createElement('div');
+                dummy.style.position = 'absolute'; dummy.style.bottom = '10px';
+                dummy.style.left = (Math.random() * 60 + 20) + '%';
+                sieveBox.appendChild(dummy);
+                spawnParticle(dummy, 'down');
+                setTimeout(() => dummy.remove(), 100); 
+            }, 50);
+
+            setTimeout(() => {
+                clearInterval(particleInterval);
+                wrapper.classList.remove('shaking');
+                statusText.innerText = t.status_siftDone;
+                completeStage(4, t.btnToStore);
+            }, 3000);
+        }
+
+        // --- TAHAP 4: PENYIMPANAN ---
+        function processStorage() {
+            const t = translations[currentLang];
+            transitionScene(3, 4);
+            statusText.innerText = t.status_storing;
+            mainBtn.style.display = 'none';
+
+            setTimeout(() => {
+                const finalProduct = document.getElementById('finalProduct');
+                finalProduct.classList.add('stored'); 
+                
+                setTimeout(() => {
+                    statusText.innerText = t.status_storeDone;
+                    statusText.classList.add('success');
+                }, 1500); 
+            }, 500);
+        }
+
+        // === HELPER FUNCTIONS ===
+        function transitionScene(fromIndex, toIndex) {
+            scenes[fromIndex].classList.remove('active');
+            scenes[toIndex].classList.add('active');
+            currentStage = toIndex;
+        }
+
+        function completeStage(nextStageIndex, btnText) {
+            currentStage = nextStageIndex;
+            isAnimating = false;
+            mainBtn.disabled = false;
+            mainBtn.innerText = btnText;
+        }
+
+        function spawnParticle(originElement, direction) {
+            const particle = document.createElement('div');
+            particle.classList.add('particle');
+            const size = Math.random() * 4 + 2 + 'px';
+            particle.style.width = size; particle.style.height = size;
+            const stage = document.querySelector('.stage-container');
+            const rect = originElement.getBoundingClientRect();
+            const stageRect = stage.getBoundingClientRect();
+            particle.style.left = (rect.left - stageRect.left + (Math.random() * 20 - 10)) + 'px';
+            particle.style.top = (rect.top - stageRect.top) + 'px';
+            stage.appendChild(particle);
+            let opacity = 1;
+            let topPos = parseFloat(particle.style.top);
+            let leftPos = parseFloat(particle.style.left);
+            let velocityY = direction === 'up' ? -1.5 : 2.5;
+            let velocityX = (Math.random() - 0.5) * 2;
+            const anim = setInterval(() => {
+                topPos += velocityY; leftPos += velocityX; opacity -= 0.02;
+                particle.style.top = topPos + 'px'; particle.style.left = leftPos + 'px';
+                particle.style.opacity = opacity;
+                if (opacity <= 0) { clearInterval(anim); particle.remove(); }
+            }, 20);
+        }
+    </script>
+</body>
+</html>

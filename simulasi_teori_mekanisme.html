@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulasi Adsorpsi: Visualisasi Interaksi</title>
+    <style>
+        :root {
+            --bg-solution: linear-gradient(180deg, #E0F2FE 0%, #BAE6FD 100%);
+            --bg-carbon: #1F2937;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f3f4f6;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        /* --- CONTROLS --- */
+        .controls {
+            background: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            text-align: center;
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .controls h2 { margin: 0; font-size: 1.2rem; color: #374151; }
+
+        button {
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            font-weight: bold;
+            border: none;
+        }
+
+        button#startBtn { background-color: #2563EB; color: white; transition: background 0.2s; }
+        button#startBtn:hover { background-color: #1D4ED8; }
+        button#startBtn:disabled { background-color: #9CA3AF; cursor: not-allowed; }
+        
+        button#resetBtn { background-color: white; color: #4B5563; border: 1px solid #D1D5DB; margin-left: 10px; }
+        button#resetBtn:hover { background-color: #F3F4F6; }
+
+        /* --- LANG TOGGLE --- */
+        .lang-toggle { display: inline-flex; margin-right: 15px; border-radius: 6px; overflow: hidden; border: 1px solid #D1D5DB; }
+        .lang-btn { padding: 8px 12px; background: white; color: #4B5563; font-size: 0.8rem; border-radius: 0; border-right: 1px solid #D1D5DB; margin: 0; }
+        .lang-btn:last-child { border-right: none; }
+        .lang-btn.active { background: #E5E7EB; font-weight: bold; color: #111827; }
+
+        /* --- SIMULATION CONTAINER --- */
+        #simulation-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            height: 450px;
+            background: var(--bg-solution);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+            border: 2px solid #BFDBFE;
+        }
+
+        /* --- SURFACE SVG --- */
+        #surface-svg {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none; /* Klik tembus ke elemen di bawahnya */
+            z-index: 10;
+        }
+
+        .surface-path {
+            fill: var(--bg-carbon);
+            /* Pattern texture effect via filter could be added here */
+        }
+
+        /* --- LEGEND (KETERANGAN WARNA) --- */
+        .legend-panel {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            z-index: 50;
+            font-size: 0.8rem;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .legend-title { font-weight: bold; margin-bottom: 3px; color: #374151; text-align: left;}
+
+        .legend-item { display: flex; align-items: center; gap: 8px; }
+        .legend-box { width: 12px; height: 12px; border-radius: 3px; }
+        .legend-line { width: 20px; height: 0; border-top-width: 2px; }
+
+        /* --- PARTICLE --- */
+        .particle {
+            position: absolute;
+            width: 16px; /* Sedikit lebih kecil agar muat di pori */
+            height: 16px;
+            border-radius: 50%;
+            box-shadow: inset -2px -2px 4px rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.8);
+            z-index: 20;
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+        }
+
+        .particle.adsorbed { cursor: help; }
+        .particle.adsorbed:hover {
+            transform: scale(1.5);
+            z-index: 100;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+
+        /* --- VISUALISASI IKATAN (GARIS PENGHUBUNG) --- */
+        .bond-line {
+            position: absolute;
+            top: 50%; 
+            left: 50%;
+            width: 0;
+            height: 20px; /* Panjang ikatan lebih pendek */
+            transform: translateX(-50%);
+            z-index: -1; 
+            pointer-events: none;
+            opacity: 0;
+            animation: growBond 0.3s forwards;
+            transform-origin: top center;
+        }
+
+        @keyframes growBond {
+            from { height: 0; opacity: 0; }
+            to { height: 20px; opacity: 1; }
+        }
+
+        .bond-dashed { border-left: 2px dashed; }
+        .bond-solid { border-left: 3px solid; }
+        .bond-double { border-left: 4px double; }
+        .bond-dotted { border-left: 3px dotted; }
+
+        /* --- TOOLTIP DETAIL --- */
+        .particle-tooltip {
+            position: absolute;
+            bottom: 40px;
+            left: 50%; 
+            transform: translateX(-50%); 
+            background: rgba(31, 41, 55, 0.95);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            width: 220px;
+            text-align: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.2s ease, bottom 0.2s ease;
+            pointer-events: none;
+            border: 1px solid rgba(255,255,255,0.2);
+            z-index: 200;
+        }
+
+        .particle-tooltip::after {
+            content: '';
+            position: absolute;
+            top: 100%; left: 50%; margin-left: -6px;
+            border-width: 6px; border-style: solid;
+            border-color: rgba(31, 41, 55, 0.95) transparent transparent transparent;
+        }
+
+        .particle:hover .particle-tooltip {
+            opacity: 1;
+            visibility: visible;
+            bottom: 40px; 
+        }
+
+        /* SMART TOOLTIP POSITIONING */
+        .particle-tooltip.tooltip-left { left: -10px !important; transform: none !important; text-align: left; }
+        .particle-tooltip.tooltip-left::after { left: 20px !important; margin-left: 0; }
+        .particle-tooltip.tooltip-right { left: auto !important; right: -10px !important; transform: none !important; text-align: right; }
+        .particle-tooltip.tooltip-right::after { left: auto !important; right: 20px !important; margin-left: 0; }
+
+        .tooltip-title { font-weight: bold; font-size: 0.95rem; display: block; margin-bottom: 4px; }
+        .tooltip-energy { font-size: 0.8rem; color: #FCD34D; display: block; margin-top: 4px; }
+        .status-text { font-size: 0.9rem; color: #6B7280; }
+    </style>
+</head>
+<body>
+
+    <div class="controls">
+        <div>
+            <h2 id="app-title">Simulasi Adsorpsi & Interaksi Molekul</h2>
+            <div class="status-text"><span id="status-label">Partikel Teradsorpsi:</span> <span id="count" style="font-weight:bold; color:#2563EB">0</span> / 25</div>
+        </div>
+        <div style="display: flex; align-items: center;">
+            <div class="lang-toggle">
+                <button id="btn-id" class="lang-btn active" onclick="setLanguage('id')">ID</button>
+                <button id="btn-en" class="lang-btn" onclick="setLanguage('en')">EN</button>
+            </div>
+            <button id="resetBtn" onclick="resetSim()">Reset</button>
+            <button id="startBtn" onclick="startSim()">Mulai Simulasi</button>
+        </div>
+    </div>
+
+    <div id="simulation-container">
+        
+        <!-- Legend Panel -->
+        <div class="legend-panel">
+            <div class="legend-title" id="legend-title">Legenda Interaksi</div>
+            <div class="legend-item"><div class="legend-box" style="background: #3B82F6;"></div><span id="leg-hbond">Ikatan Hidrogen (Dashed)</span></div>
+            <div class="legend-item"><div class="legend-box" style="background: #9CA3AF;"></div><span id="leg-vdw">Van der Waals (Dotted)</span></div>
+            <div class="legend-item"><div class="legend-box" style="background: #EF4444;"></div><span id="leg-coulomb">Gaya Coulomb (Solid)</span></div>
+            <div class="legend-item"><div class="legend-box" style="background: #10B981;"></div><span id="leg-pipi">Pi-Pi Stacking (Double)</span></div>
+        </div>
+
+        <!-- SVG untuk Permukaan Arang Berpori -->
+        <svg id="surface-svg" viewBox="0 0 800 450" preserveAspectRatio="none">
+            <defs>
+                <!-- Pattern untuk tekstur arang -->
+                <pattern id="carbonPattern" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
+                    <circle cx="2" cy="2" r="1" fill="#374151" opacity="0.5"/>
+                    <circle cx="12" cy="12" r="1.5" fill="#374151" opacity="0.5"/>
+                </pattern>
+            </defs>
+            <path id="carbon-path" class="surface-path" d="" fill="url(#carbonPattern)" stroke="none"></path>
+            <!-- Overlay warna dasar gelap -->
+            <path id="carbon-fill" class="surface-path" d="" fill="var(--bg-carbon)" opacity="0.9"></path>
+        </svg>
+
+    </div>
+
+    <script>
+        let currentLang = 'id';
+
+        const DICT = {
+            id: {
+                title: "Simulasi Adsorpsi & Interaksi Molekul",
+                statusLabel: "Partikel Teradsorpsi:",
+                btnReset: "Reset",
+                btnStart: "Mulai Simulasi",
+                btnDone: "Selesai",
+                legendTitle: "Legenda Interaksi",
+                legHbond: "Ikatan Hidrogen (Dashed)",
+                legVdw: "Van der Waals (Dotted)",
+                legCoulomb: "Gaya Coulomb (Solid)",
+                legPipi: "Pi-Pi Stacking (Double)",
+                energyLabel: "Energi Ikat:"
+            },
+            en: {
+                title: "Adsorption & Molecular Interaction",
+                statusLabel: "Adsorbed Particles:",
+                btnReset: "Reset",
+                btnStart: "Start Simulation",
+                btnDone: "Finished",
+                legendTitle: "Interaction Legend",
+                legHbond: "Hydrogen Bond (Dashed)",
+                legVdw: "Van der Waals (Dotted)",
+                legCoulomb: "Coulomb Force (Solid)",
+                legPipi: "Pi-Pi Stacking (Double)",
+                energyLabel: "Binding Energy:"
+            }
+        };
+
+        const INTERACTIONS = [
+            { 
+                id: 'hbond', color: '#3B82F6', borderColor: '#1D4ED8', lineStyle: 'bond-dashed', 
+                lang: {
+                    id: { name: 'Ikatan Hidrogen', desc: 'Interaksi gugus polar (-OH, -NH)', energy: 'Sedang (5-30 kJ/mol)' },
+                    en: { name: 'Hydrogen Bond', desc: 'Polar group interaction (-OH, -NH)', energy: 'Medium (5-30 kJ/mol)' }
+                }
+            },
+            { 
+                id: 'vdw', color: '#9CA3AF', borderColor: '#4B5563', lineStyle: 'bond-dotted', 
+                lang: {
+                    id: { name: 'Gaya Van der Waals', desc: 'Fisisorpsi lemah permukaan', energy: 'Rendah (< 5 kJ/mol)' },
+                    en: { name: 'Van der Waals Force', desc: 'Weak surface physisorption', energy: 'Low (< 5 kJ/mol)' }
+                }
+            },
+            { 
+                id: 'coulomb', color: '#EF4444', borderColor: '#B91C1C', lineStyle: 'bond-solid', 
+                lang: {
+                    id: { name: 'Gaya Coulomb', desc: 'Tarik-menarik ionik antar muatan', energy: 'Tinggi (> 50 kJ/mol)' },
+                    en: { name: 'Coulomb Force', desc: 'Ionic attraction between charges', energy: 'High (> 50 kJ/mol)' }
+                }
+            },
+            { 
+                id: 'pipi', color: '#10B981', borderColor: '#047857', lineStyle: 'bond-double', 
+                lang: {
+                    id: { name: 'Pi-Pi Stacking', desc: 'Tumpukan cincin aromatik', energy: 'Sedang-Tinggi (10-40 kJ/mol)' },
+                    en: { name: 'Pi-Pi Stacking', desc: 'Aromatic ring stacking', energy: 'Med-High (10-40 kJ/mol)' }
+                }
+            }
+        ];
+
+        const CONFIG = {
+            particleCount: 25,
+            surfaceBaseY: 280, // Ketinggian dasar (mulai pori)
+            containerHeight: 450
+        };
+
+        let particles = [];
+        let animationId;
+        let isRunning = false;
+        let surfaceData = []; // Menyimpan profil ketinggian permukaan [x] = y
+        const container = document.getElementById('simulation-container');
+        const countSpan = document.getElementById('count');
+        const surfaceSvgPath = document.getElementById('carbon-path');
+        const surfaceFillPath = document.getElementById('carbon-fill');
+
+        // --- 1. GENERATE SURFACE PROFILE (PORI-PORI) ---
+        function generateSurface() {
+            const width = container.clientWidth || 800; // Fallback jika belum render
+            const height = CONFIG.containerHeight;
+            let pathString = `M0,${height} L0,${CONFIG.surfaceBaseY} `;
+            
+            surfaceData = [];
+            
+            // Kita buat profil permukaan per 5 pixel
+            const step = 5;
+            let currentY = CONFIG.surfaceBaseY;
+            
+            for (let x = 0; x <= width; x += step) {
+                // Algoritma Random Walk sederhana untuk membuat tekstur kasar
+                // Kadang-kadang membuat "Pori Dalam" (Deep Pore)
+                
+                if (Math.random() > 0.92) {
+                    // Buat pori dalam tiba-tiba
+                    currentY += (Math.random() * 60) + 20; 
+                } else if (Math.random() > 0.92 && currentY > CONFIG.surfaceBaseY + 20) {
+                    // Kembali naik
+                    currentY -= (Math.random() * 60) + 20;
+                } else {
+                    // Noise biasa
+                    currentY += (Math.random() - 0.5) * 10;
+                }
+
+                // Clamping (Batas atas dan bawah pori)
+                if (currentY < CONFIG.surfaceBaseY) currentY = CONFIG.surfaceBaseY; // Jangan terlalu tinggi
+                if (currentY > height - 10) currentY = height - 10; // Jangan tembus bawah
+
+                // Simpan data untuk deteksi tabrakan nanti
+                // Kita simpan range x sampai x+step dengan nilai y ini
+                for(let k=0; k<step; k++) {
+                    surfaceData[x+k] = currentY;
+                }
+
+                pathString += `L${x},${currentY} `;
+            }
+
+            pathString += `L${width},${height} Z`; // Tutup path ke pojok bawah
+            
+            surfaceSvgPath.setAttribute('d', pathString);
+            surfaceFillPath.setAttribute('d', pathString);
+            
+            // Handle sisa array jika width canvas > loop
+            for(let i=surfaceData.length; i<=width+20; i++) {
+                surfaceData[i] = currentY;
+            }
+        }
+
+        class Particle {
+            constructor() {
+                this.element = document.createElement('div');
+                this.element.classList.add('particle');
+                this.interaction = INTERACTIONS[Math.floor(Math.random() * INTERACTIONS.length)];
+                this.element.style.backgroundColor = this.interaction.color;
+                this.element.style.borderColor = this.interaction.borderColor;
+
+                const maxWidth = container.clientWidth;
+                this.x = Math.random() * (maxWidth - 20);
+                this.y = -30 - (Math.random() * 200); 
+
+                this.speedY = 0.8 + Math.random() * 1.2;
+                this.wobblePhase = Math.random() * Math.PI * 2;
+                
+                this.isAdsorbed = false;
+                this.updateDOM();
+                container.appendChild(this.element);
+            }
+
+            update() {
+                if (this.isAdsorbed) return;
+
+                // Gerak Turun
+                this.y += this.speedY;
+                // Gerak Kiri-Kanan
+                this.x += Math.sin(this.y * 0.05 + this.wobblePhase) * 1.5;
+
+                // Batas Kiri Kanan
+                const maxW = container.clientWidth - 16;
+                if (this.x < 0) this.x = 0;
+                if (this.x > maxW) this.x = maxW;
+
+                // --- DETEKSI TABRAKAN PERMUKAAN DINAMIS ---
+                // Ambil titik tengah partikel untuk sampling permukaan
+                const sampleX = Math.floor(this.x + 8); 
+                const surfaceYAtX = surfaceData[sampleX] || CONFIG.containerHeight;
+
+                // Offset sedikit (-8) agar partikel terlihat "duduk" di permukaan, bukan tenggelam setengah
+                if (this.y >= surfaceYAtX - 12) {
+                    this.adsorb(surfaceYAtX - 12);
+                }
+
+                this.updateDOM();
+            }
+
+            updateDOM() {
+                this.element.style.transform = `translate(${this.x}px, ${this.y}px)`;
+            }
+
+            adsorb(finalY) {
+                this.isAdsorbed = true;
+                this.y = finalY;
+                this.updateDOM(); 
+                this.element.classList.add('adsorbed');
+                this.createBondLine();
+                this.createTooltip();
+                updateUI();
+            }
+
+            createBondLine() {
+                const bond = document.createElement('div');
+                bond.classList.add('bond-line', this.interaction.lineStyle);
+                bond.style.borderColor = this.interaction.color;
+                this.element.appendChild(bond);
+            }
+
+            createTooltip() {
+                const tooltip = document.createElement('div');
+                tooltip.classList.add('particle-tooltip');
+                tooltip.style.borderTop = `3px solid ${this.interaction.color}`;
+                
+                const containerWidth = container.clientWidth;
+                const threshold = 120; // Setengah lebar tooltip + margin
+
+                if (this.x < threshold) tooltip.classList.add('tooltip-left');
+                else if (this.x > containerWidth - threshold) tooltip.classList.add('tooltip-right');
+
+                // Simpan reference data interaction ke elemen agar bisa diupdate bahasanya
+                this.tooltipElement = tooltip;
+                this.updateTooltipText();
+
+                this.element.appendChild(tooltip);
+            }
+
+            updateTooltipText() {
+                if (!this.tooltipElement) return;
+                const langData = this.interaction.lang[currentLang];
+                this.tooltipElement.innerHTML = `
+                    <span class="tooltip-title" style="color:${this.interaction.color}">
+                        ${langData.name}
+                    </span>
+                    ${langData.desc}
+                    <span class="tooltip-energy">${DICT[currentLang].energyLabel} ${langData.energy}</span>
+                `;
+            }
+        }
+
+        function startSim() {
+            if (isRunning) return;
+            resetSim();
+            // Generate permukaan baru setiap kali mulai agar variatif
+            generateSurface();
+            
+            isRunning = true;
+            document.getElementById('startBtn').disabled = true;
+
+            for(let i=0; i<CONFIG.particleCount; i++) {
+                particles.push(new Particle());
+            }
+
+            animate();
+        }
+
+        function animate() {
+            if (!isRunning) return;
+
+            let activeParticles = 0;
+            particles.forEach(p => {
+                p.update();
+                if (!p.isAdsorbed) activeParticles++;
+            });
+
+            if (activeParticles > 0) {
+                animationId = requestAnimationFrame(animate);
+            } else {
+                isRunning = false;
+                document.getElementById('startBtn').textContent = DICT[currentLang].btnDone;
+            }
+        }
+
+        function resetSim() {
+            isRunning = false;
+            cancelAnimationFrame(animationId);
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('startBtn').textContent = DICT[currentLang].btnStart;
+            
+            particles.forEach(p => p.element.remove());
+            particles = [];
+            updateUI();
+        }
+
+        function setLanguage(lang) {
+            currentLang = lang;
+            
+            // Update Toggle Buttons visual state
+            document.getElementById('btn-id').classList.toggle('active', lang === 'id');
+            document.getElementById('btn-en').classList.toggle('active', lang === 'en');
+            
+            // Update Static UI elements
+            const dict = DICT[lang];
+            document.getElementById('app-title').textContent = dict.title;
+            document.getElementById('status-label').textContent = dict.statusLabel;
+            document.getElementById('resetBtn').textContent = dict.btnReset;
+            
+            // Update Start/Done Button dynamically based on simulation state
+            if (isRunning) {
+                document.getElementById('startBtn').textContent = dict.btnStart;
+            } else {
+                const isFinished = particles.length > 0 && particles.every(p => p.isAdsorbed);
+                document.getElementById('startBtn').textContent = isFinished ? dict.btnDone : dict.btnStart;
+            }
+
+            // Update Legends
+            document.getElementById('legend-title').textContent = dict.legendTitle;
+            document.getElementById('leg-hbond').textContent = dict.legHbond;
+            document.getElementById('leg-vdw').textContent = dict.legVdw;
+            document.getElementById('leg-coulomb').textContent = dict.legCoulomb;
+            document.getElementById('leg-pipi').textContent = dict.legPipi;
+
+            // Update All Existing Particles Tooltips actively on screen
+            particles.forEach(p => {
+                if (p.isAdsorbed) {
+                    p.updateTooltipText();
+                }
+            });
+        }
+
+        function updateUI() {
+            const adsorbedCount = particles.filter(p => p.isAdsorbed).length;
+            countSpan.innerText = adsorbedCount;
+        }
+
+        // Init pertama kali (visual saja, belum ada data physics)
+        window.addEventListener('load', () => {
+             generateSurface();
+        });
+        
+        // Regenerate surface jika window resize agar tidak pecah
+        let resizeTimer;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => {
+                if(!isRunning && particles.length === 0) generateSurface();
+            }, 200);
+        });
+
+    </script>
+</body>
+</html>

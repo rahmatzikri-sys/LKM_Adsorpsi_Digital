@@ -1,0 +1,1269 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulasi Titrasi Asam Basa - Penentuan Konsentrasi Jeruk</title>
+    <style>
+        /* --- ASET GAMBAR & VARIABEL --- */
+        :root {
+            /* --- UKURAN & WARNA --- */
+            --size-buret-w: 30px;
+            --size-buret-h: 300px;
+            --size-erlenmeyer: 140px;
+            --color-naoh: rgba(235, 245, 255, 0.85); /* Diperjelas agar putih/biru muda terlihat */
+            --color-jeruk: rgba(255, 170, 0, 0.65);
+            --color-pink: rgba(255, 105, 180, 0.7);
+            --color-over: rgba(199, 21, 133, 0.85);
+            
+            --bg-lab: #f0f4f8;
+            --glass-border: 1px solid rgba(255, 255, 255, 0.7);
+            --shadow: 0 6px 12px rgba(0,0,0,0.15);
+            
+            /* ERLENMEYER SVG DATA URI */
+            --img-erlenmeyer: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 140'%3E%3Cpath d='M40,25 L60,25 L60,50 L95,125 A10,10 0 0,1 85,140 L15,140 A10,10 0 0,1 5,125 L40,50 Z' fill='rgba(255,255,255,0.15)' stroke='rgba(255,255,255,0.8)' stroke-width='3' stroke-linejoin='round'/%3E%3Cpath d='M35,15 L65,15 A5,5 0 0,1 70,20 L70,25 L30,25 L30,20 A5,5 0 0,1 35,15 Z' fill='rgba(255,255,255,0.5)' stroke='rgba(255,255,255,0.8)' stroke-width='2'/%3E%3C/svg%3E");
+            
+            /* PIPET SVG DATA URI */
+            --img-pipet: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 100'%3E%3Cpath d='M8,20 L8,80 C8,90 11,95 12,100 C13,95 16,90 16,80 L16,20 Z' fill='rgba(255,255,255,0.6)' stroke='%23333' stroke-width='1'/%3E%3Cpath d='M4,0 L20,0 C22,0 24,2 24,5 L24,15 C24,18 22,20 20,20 L4,20 C2,20 0,18 0,15 L0,5 C0,2 2,0 4,0 Z' fill='%23e74c3c'/%3E%3C/svg%3E");
+        }
+
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+
+        body {
+            background-color: var(--bg-lab);
+            color: #333;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        header {
+            width: 100%;
+            background: #2c3e50;
+            color: white;
+            padding: 1rem;
+            text-align: center;
+            box-shadow: var(--shadow);
+            position: relative;
+        }
+
+        h1 { margin: 0; font-size: 1.5rem; }
+        p.subtitle { margin: 5px 0 0; opacity: 0.8; font-size: 0.9rem; }
+
+        /* --- TOMBOL BAHASA --- */
+        .lang-switcher {
+            position: absolute;
+            top: 50%;
+            right: 1rem;
+            transform: translateY(-50%);
+            display: flex;
+            gap: 6px;
+        }
+
+        .lang-btn {
+            background: transparent;
+            color: rgba(255,255,255,0.6);
+            border: 1px solid rgba(255,255,255,0.4);
+            padding: 4px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.8rem;
+            width: auto;
+            margin-bottom: 0;
+            transition: all 0.2s;
+        }
+
+        .lang-btn:hover { background: rgba(255,255,255,0.15); color: white; }
+        .lang-btn.active { background: white; color: #2c3e50; border-color: white; }
+
+        /* --- LAYOUT UTAMA --- */
+        .lab-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            padding: 20px;
+            width: 100%;
+            max-width: 1200px;
+        }
+
+        .panel {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+        }
+
+        /* --- AREA SIMULASI (TENGAH) --- */
+        #simulation-area {
+            flex: 2;
+            min-width: 300px;
+            height: 550px;
+            position: relative;
+            /* Latar Belakang Gelap agar NaOH & alat gelas jelas */
+            background: linear-gradient(to bottom, #2c3e50 40%, #1a252f 100%);
+            border: 2px solid #34495e;
+            border-radius: 12px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            overflow: hidden;
+            box-shadow: inset 0 0 30px rgba(0,0,0,0.5);
+        }
+
+        /* Tambahan Efek Meja Lab Gelap */
+        #simulation-area::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; width: 100%; height: 25px;
+            background: linear-gradient(to bottom, #7f8c8d, #34495e);
+            border-top: 2px solid #95a5a6;
+            z-index: 0;
+        }
+
+        /* Statif & Klem */
+        .statif-base {
+            position: absolute;
+            left: 10%;
+            bottom: 25px;
+            width: 140px;
+            height: 15px;
+            background: linear-gradient(to bottom, #7f8c8d, #2c3e50);
+            border-radius: 5px 5px 2px 2px;
+            z-index: 1;
+            box-shadow: 0 5px 10px rgba(0,0,0,0.3);
+        }
+
+        .statif-rod {
+            position: absolute;
+            left: calc(10% + 65px); /* Center of base */
+            bottom: 40px;
+            width: 12px;
+            height: 480px;
+            background: linear-gradient(to right, #95a5a6, #ecf0f1 30%, #7f8c8d 80%, #34495e);
+            border-radius: 6px 6px 0 0;
+            z-index: 1;
+        }
+        
+        .klem {
+            position: absolute;
+            left: calc(10% + 70px);
+            top: 120px;
+            width: 80px;
+            height: 16px;
+            background: linear-gradient(to bottom, #34495e, #2c3e50);
+            border-radius: 3px;
+            z-index: 2;
+            box-shadow: 0 3px 5px rgba(0,0,0,0.2);
+        }
+
+        .klem::after { /* Penjepit buret */
+            content: '';
+            position: absolute;
+            right: -10px;
+            top: -4px;
+            width: 24px;
+            height: 24px;
+            background: #2c3e50;
+            border-radius: 50%;
+            border: 3px solid #7f8c8d;
+        }
+
+        /* Buret */
+        .buret-container {
+            position: absolute;
+            left: calc(10% + 145px); /* Sejajar penjepit */
+            top: 40px;
+            width: var(--size-buret-w);
+            height: calc(var(--size-buret-h) + 40px);
+            z-index: 3;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .buret-glass {
+            width: 100%;
+            height: var(--size-buret-h);
+            background: rgba(255, 255, 255, 0.15);
+            border: 2px solid rgba(255, 255, 255, 0.6);
+            border-left: 2px solid rgba(255, 255, 255, 0.9);
+            border-right: 2px solid rgba(200, 210, 220, 0.8);
+            border-radius: 5px 5px 0 0;
+            position: relative;
+            overflow: hidden;
+            box-shadow: inset -3px 0 8px rgba(0,0,0,0.1), inset 5px 0 10px rgba(255,255,255,0.7);
+        }
+
+        .buret-marks {
+            position: absolute;
+            top: 0; left: 0; width: 40%; height: 100%;
+            /* Garis diubah menjadi putih transparan agar terlihat di gelap */
+            background: repeating-linear-gradient(to bottom, transparent, transparent 9px, rgba(255,255,255,0.6) 9px, rgba(255,255,255,0.6) 10px);
+            z-index: 3;
+            pointer-events: none;
+        }
+
+        .buret-marks::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 150%; height: 100%;
+            /* Garis diubah menjadi putih transparan */
+            background: repeating-linear-gradient(to bottom, transparent, transparent 49px, rgba(255,255,255,0.9) 49px, rgba(255,255,255,0.9) 50px);
+        }
+
+        .liquid-naoh {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 0%; /* Mulai dalam keadaan kosong */
+            background: var(--color-naoh);
+            transition: height 0.1s linear;
+            z-index: 1;
+            box-shadow: inset 0 5px 5px rgba(255,255,255,0.6); /* Permukaan cairan */
+        }
+
+        .keran-container {
+            width: 12px;
+            height: 25px;
+            background: rgba(200, 210, 220, 0.8);
+            border-left: 1px solid #fff;
+            border-right: 1px solid #aaa;
+            position: relative;
+            z-index: 2;
+        }
+
+        .keran {
+            position: absolute;
+            left: -10px;
+            top: 5px;
+            width: 32px;
+            height: 12px;
+            background: linear-gradient(to bottom, #e74c3c, #c0392b);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .buret-tip {
+            width: 6px;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.3);
+            border: 1px solid rgba(255,255,255,0.6);
+            border-top: none;
+            border-radius: 0 0 3px 3px;
+        }
+
+        .drop {
+            position: absolute;
+            left: calc(10% + 157px); /* Posisi pas di bawah buret */
+            top: 380px;
+            width: 8px;
+            height: 12px;
+            background: var(--color-naoh);
+            border-radius: 50% 50% 40% 40% / 60% 60% 30% 30%; /* Bentuk air tetesan */
+            opacity: 0;
+            pointer-events: none;
+            z-index: 2;
+            box-shadow: inset -2px -2px 4px rgba(0,0,0,0.1), inset 2px 2px 4px rgba(255,255,255,0.8);
+        }
+
+        /* Erlenmeyer */
+        .erlenmeyer-container {
+            position: absolute;
+            left: 70%; /* Posisi awal di meja samping */
+            bottom: 25px;
+            width: 110px;
+            height: 150px;
+            z-index: 3;
+            transform-origin: bottom center;
+            filter: drop-shadow(0 10px 5px rgba(0,0,0,0.15));
+            transition: left 1.5s ease-in-out;
+        }
+
+        .erlenmeyer-container.placed {
+            left: calc(10% + 105px); /* Tengah sejajar buret setelah dipindah */
+        }
+
+        .flask-shape {
+            width: 100%;
+            height: 100%;
+            /* Memotong cairan sesuai lekukan SVG erlenmeyer */
+            clip-path: polygon(35% 15%, 65% 15%, 65% 35%, 95% 90%, 85% 100%, 15% 100%, 5% 90%, 35% 35%);
+            position: relative;
+        }
+
+        .flask-img {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image: var(--img-erlenmeyer);
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: bottom;
+            z-index: 5;
+            pointer-events: none;
+        }
+
+        .liquid-mix {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 20px; /* Volume awal */
+            background: var(--color-jeruk);
+            transition: background-color 0.5s ease, height 0.2s ease;
+            z-index: 4;
+            /* Inner shadow untuk efek kedalaman cairan */
+            box-shadow: inset 0 3px 5px rgba(255,255,255,0.4), inset 0 -5px 10px rgba(0,0,0,0.1);
+        }
+
+        /* --- KONTROL & DATA (Kanan) --- */
+        #control-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 5px solid #3498db;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .card h3 { margin-top: 0; font-size: 1.1rem; color: #2c3e50; }
+
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+            width: 100%;
+            margin-bottom: 5px;
+        }
+
+        button:hover { background: #2980b9; }
+        button:disabled { background: #bdc3c7; cursor: not-allowed; }
+        
+        button.add-pp { background: #e67e22; }
+        button.stop { background: #e74c3c; }
+
+        .status-display {
+            font-family: 'Courier New', monospace;
+            background: #222;
+            color: #0f0;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+            margin-top: 10px;
+        }
+        
+        th, td { border: 1px solid #ddd; padding: 6px; text-align: center; }
+        th { background: #f8f9fa; }
+        .active-row { background: #e8f6fd; font-weight: bold; }
+
+        /* --- ANIMASI --- */
+        @keyframes dripAnim {
+            0% { transform: translateY(0); opacity: 1; }
+            100% { transform: translateY(140px); opacity: 0; }
+        }
+
+        @keyframes shakeFlask {
+            0% { transform: rotate(0deg); }
+            25% { transform: rotate(-3deg); }
+            50% { transform: rotate(0deg); }
+            75% { transform: rotate(3deg); }
+            100% { transform: rotate(0deg); }
+        }
+
+        @keyframes pipetteDripAnim {
+            0% { transform: translateY(0); opacity: 1; }
+            100% { transform: translateY(100px); opacity: 0; }
+        }
+
+        .anim-drip {
+            animation: dripAnim 0.4s infinite linear;
+        }
+
+        .anim-pipette-drip {
+            animation: pipetteDripAnim 0.5s ease-in forwards;
+        }
+
+        .anim-shake {
+            animation: shakeFlask 0.8s infinite ease-in-out;
+        }
+
+        /* --- TAMBAHAN ANIMASI BARU --- */
+        .spill-visual {
+            position: absolute;
+            top: -10px;
+            left: -15px;
+            width: 60px;
+            height: 0;
+            background: rgba(230, 240, 250, 0.8);
+            border-radius: 10px;
+            opacity: 0;
+            z-index: 10;
+            pointer-events: none;
+            transition: height 0.2s, opacity 0.5s;
+        }
+        .spill-visual.active {
+            height: 300px;
+            opacity: 1;
+        }
+
+        .pipette-container {
+            position: absolute;
+            left: calc(10% + 130px);
+            bottom: 180px;
+            width: 30px;
+            height: 100px;
+            background-image: var(--img-pipet);
+            background-size: contain;
+            background-repeat: no-repeat;
+            opacity: 0;
+            z-index: 10;
+            transform: translateY(-50px) rotate(-15deg);
+            transition: all 0.5s ease;
+        }
+        .pipette-container.active {
+            opacity: 1;
+            transform: translateY(0) rotate(-15deg);
+        }
+        .pipette-drop {
+            position: absolute;
+            left: 2px;
+            bottom: -10px;
+            width: 8px;
+            height: 12px;
+            background: rgba(255,255,255,0.8);
+            border-radius: 50%;
+            opacity: 0;
+        }
+
+        /* --- MODAL INPUT --- */
+        #calc-modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            max-width: 500px; /* Diperlebar sedikit */
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            text-align: center;
+        }
+        .calc-step {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+        .calc-step p { margin: 5px 0; font-size: 0.95rem; }
+        .calc-step code { font-weight: bold; color: #2980b9; }
+        
+        input[type="number"] {
+            padding: 8px;
+            width: 100%;
+            margin: 8px 0 0 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1 data-i18n="header_title">Simulasi Tahap 5: Titrasi Asam Basa</h1>
+        <p class="subtitle" data-i18n="header_subtitle">Penentuan Konsentrasi Asam Jeruk (Metode Titrasi Alkalimetri)</p>
+        <div class="lang-switcher">
+            <button class="lang-btn active" onclick="switchLang('id')" id="btn-lang-id">ID</button>
+            <button class="lang-btn" onclick="switchLang('en')" id="btn-lang-en">EN</button>
+        </div>
+    </header>
+
+    <div class="lab-container">
+        
+        <!-- AREA SIMULASI -->
+        <div id="simulation-area">
+            <!-- Statif -->
+            <div class="statif-base"></div>
+            <div class="statif-rod"></div>
+            <div class="klem"></div>
+
+            <!-- Buret -->
+            <div class="buret-container">
+                <div class="spill-visual" id="spill-effect"></div>
+                <div class="buret-glass">
+                    <div class="buret-marks"></div>
+                    <div class="liquid-naoh" id="buret-liquid"></div>
+                </div>
+                <div class="keran-container">
+                    <div class="keran" id="keran-valve"></div>
+                </div>
+                <div class="buret-tip"></div>
+            </div>
+
+            <!-- Tetesan -->
+            <div class="drop" id="drop-visual"></div>
+
+            <!-- Pipet Indikator -->
+            <div class="pipette-container" id="pipette">
+                <div class="pipette-drop" id="pipette-drop"></div>
+            </div>
+
+            <!-- Erlenmeyer -->
+            <div class="erlenmeyer-container" id="erlenmeyer">
+                <!-- Lapisan gambar botol -->
+                <div class="flask-img"></div> 
+                <!-- Lapisan cairan -->
+                <div class="flask-shape">
+                    <div class="liquid-mix" id="flask-liquid"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PANEL KONTROL -->
+        <div id="control-panel">
+            
+            <!-- Info Status -->
+            <div class="card">
+                <h3 data-i18n="card_monitor">Monitor Digital</h3>
+                <div class="status-display">
+                    <div><span data-i18n="label_sisa">Sisa NaOH di Buret</span>: <span id="sisa-display">0.00</span> mL</div>
+                    <div><span data-i18n="label_vol">Vol Keluar (&Delta;V)</span>: <span id="vol-display">0.00</span> mL</div>
+                    <div><span data-i18n="label_status">Status</span>: <span id="step-status" data-i18n="status_prepare">Siapkan Alat</span></div>
+                </div>
+                <div style="font-size: 0.85rem; color: #666;">
+                    <strong data-i18n="label_target">Target</strong>: <span data-i18n="target_desc">Titrasi hingga warna berubah menjadi</span> <span style="color: hotpink; font-weight:bold;" data-i18n="target_color">Merah Muda (Pink)</span>.
+                </div>
+            </div>
+
+            <!-- Kontrol Utama -->
+            <div class="card">
+                <h3 data-i18n="card_control">Kontrol Alat</h3>
+                
+                <!-- Step 1: Isi Buret -->
+                <div id="ctrl-step1">
+                    <p style="margin: 0 0 5px; font-size: 0.9rem;" data-i18n="step1_label">1. Persiapan Titran:</p>
+                    <button onmousedown="startFillBuret()" onmouseup="stopFillBuret()" onmouseleave="stopFillBuret()" ontouchstart="startFillBuret()" ontouchend="stopFillBuret()" data-i18n="btn_fill_buret">
+                        🧪 Tahan untuk Isi Buret (NaOH)
+                    </button>
+                    <p id="fill-msg" style="font-size: 0.8rem; color: #e74c3c; display:none;"></p>
+                    <button onclick="nextToStep2()" id="btn-to-step2" style="display:none; background:#2ecc71; margin-top:5px;" data-i18n="btn_buret_ready">✅ Buret Siap (Lanjut)</button>
+                </div>
+
+                <!-- Step 2: Pindahkan Erlenmeyer -->
+                <div id="ctrl-step2" style="display:none;">
+                    <p style="margin: 0 0 5px; font-size: 0.9rem;" data-i18n="step2_label">2. Persiapan Sampel:</p>
+                    <button class="add-pp" onclick="placeFlask()" data-i18n="btn_place_flask">
+                        🖐️ Ambil & Letakkan Erlenmeyer
+                    </button>
+                </div>
+
+                <!-- Step 3: Tambah Indikator -->
+                <div id="ctrl-step3" style="display:none;">
+                    <p style="margin: 0 0 5px; font-size: 0.9rem;" data-i18n="step3_label">3. Tambah Indikator:</p>
+                    <button class="add-pp" onclick="addIndicator()" id="btn-add-pp" data-i18n="btn_add_pp">
+                        💧 Teteskan 3 Tetes Indikator PP
+                    </button>
+                    <p id="pp-msg" style="font-size: 0.8rem; color: #e67e22; display:none;" data-i18n="pp_added">3 tetes indikator telah ditambahkan.</p>
+                </div>
+
+                <!-- Step 4: Titrasi -->
+                <div id="ctrl-step4" style="display:none;">
+                    <p style="margin: 0 0 5px; font-size: 0.9rem;" data-i18n="step4_label">4. Titrasi (Keran Buret):</p>
+                    <button onmousedown="startTitration()" onmouseup="stopTitration()" onmouseleave="stopTitration()" ontouchstart="startTitration()" ontouchend="stopTitration()" data-i18n="btn_titrate">
+                        💧 Tekan & Tahan untuk Meneteskan
+                    </button>
+                    <button class="stop" onclick="finishTrial()" id="btn-finish" disabled data-i18n="btn_finish">
+                        ✅ Selesai (Catat Data)
+                    </button>
+                    <button onclick="resetFlask()" id="btn-next" style="display:none; background:#27ae60;" data-i18n="btn_next">
+                        🔄 Lanjut Percobaan Berikutnya
+                    </button>
+                    <button onclick="showCalculation()" id="btn-calc" style="display:none; background:#8e44ad;" data-i18n="btn_calc">
+                        🧮 Hitung Konsentrasi
+                    </button>
+                </div>
+            </div>
+
+            <!-- Data Tabel -->
+            <div class="card">
+                <h3 data-i18n="card_data">Data Hasil (Triplo)</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th data-i18n="th_trial">Percobaan</th>
+                            <th data-i18n="th_vawal">V Awal (mL)</th>
+                            <th data-i18n="th_vakhir">V Akhir (mL)</th>
+                            <th>&Delta;V (mL)</th>
+                            <th data-i18n="th_color">Warna Akhir</th>
+                        </tr>
+                    </thead>
+                    <tbody id="data-table-body">
+                        <tr id="row-1"><td>1</td><td>-</td><td>-</td><td>-</td><td>-</td></tr>
+                        <tr id="row-2"><td>2</td><td>-</td><td>-</td><td>-</td><td>-</td></tr>
+                        <tr id="row-3"><td>3</td><td>-</td><td>-</td><td>-</td><td>-</td></tr>
+                    </tbody>
+                </table>
+                <div style="margin-top: 15px; padding: 10px; background: #e8f6fd; border-radius: 6px; border-left: 4px solid #3498db; text-align: center;">
+                    <strong><span data-i18n="label_avg">Rata-rata Volume NaOH (&Delta;V)</span>: <span id="avg-vol-display" style="color: #2980b9; font-size: 1.1rem;">-</span> mL</strong>
+                </div>
+                <p style="font-size: 0.8rem; margin-top: 10px; line-height: 1.4;">
+                    <span data-i18n="info_v1">Vol Jeruk 10% (V1) = 25 mL</span><br>
+                    <span data-i18n="info_m2">Konsentrasi NaOH (M2) = <strong>0.1 M</strong></span><br>
+                    <i style="color: #7f8c8d;" data-i18n="info_note">*Kadar yang didapat adalah Total Asam Tertitrasi yang disetarakan sebagai Asam Sitrat.</i>
+                </p>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Modal Kalkulasi -->
+    <div id="calc-modal">
+        <div class="modal-content">
+            <h3 data-i18n="modal_title">Kalkulator Konsentrasi Asam Sitrat</h3>
+            
+            <div class="calc-step">
+                <p><strong data-i18n="modal_formula_title">Rumus Titrasi Asam Sitrat dan NaOH</strong></p>
+                <p style="font-size: 0.85rem; color: #555; text-align: justify; line-height: 1.5;" data-i18n="modal_formula_desc">
+                    Asam sitrat adalah asam triprotik (memiliki valensi 3). Pada titik ekuivalen berlaku:<br><br>
+                    <code style="display:block; text-align:center; background:#e8f6fd; padding:8px; border-radius:4px; color: #2980b9;">3 × M_Sitrat × V_Sitrat = M_NaOH × V_NaOH</code><br>
+                    <strong data-i18n="modal_help_data">Data Bantuan:</strong><br>
+                    • M_NaOH = 0.1 M<br>
+                    • <span data-i18n="modal_vsitrat">V_Sitrat (Volume Sampel) = 25 mL</span><br>
+                </p>
+                <label for="user-avg-vol" style="font-weight: bold; font-size: 0.9rem; margin-top: 10px; display: block;" data-i18n="modal_input_label">Masukkan Volume Rata-rata NaOH (mL):</label>
+                <input type="number" id="user-avg-vol" step="0.01" data-i18n-placeholder="modal_placeholder">
+            </div>
+            
+            <button onclick="calculateConcentration()" data-i18n="btn_calculate">Hitung Konsentrasi</button>
+            <button onclick="closeModal()" style="background:#7f8c8d; margin-top:5px;" data-i18n="btn_close">Tutup</button>
+            
+            <div id="calc-result" style="margin-top:15px; display:none; padding: 15px; background: #e8f8f5; border-radius: 6px; border-left: 5px solid #2ecc71; text-align: left;">
+                <p style="margin:0 0 10px 0; font-weight:bold; color: #27ae60;" id="calc-title">✅ Hasil Perhitungan:</p>
+                <p style="margin:0; font-size: 0.95rem;" id="calc-feedback"></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- KONFIGURASI SIMULASI ---
+        const TRIALS = 3;
+        const INITIAL_FLASK_VOL = 20; // Tinggi cairan awal (visual px)
+        const BURET_MAX_VOL = 50; // mL
+        const V1_JERUK = 25; // mL (Sesuai prosedur: 25 mL larutan jeruk 10%)
+        const M2_NAOH = 0.1; // Molar (Diubah ke 0.1 M agar V2 realistis ~19mL)
+
+        // State Variables
+        let currentTrial = 1;
+        let currentVol = 0; // Volume yang sudah diteteskan ke Erlenmeyer
+        let buretFillVol = 0; // Volume NaOH yang ada di dalam Buret
+        let isFilling = false;
+        let isTitrating = false;
+        let trialData = [];
+        let animationId;
+        let currentLang = 'id';
+        
+        // Target Volumes (Disetel sekitar 19.5 mL agar M1 bernilai realistis ~0.026 M, dan Kadar murni ~5%)
+        const targets = [
+            (19.4 + Math.random() * 0.2).toFixed(2), // ~19.5
+            (19.5 + Math.random() * 0.2).toFixed(2), // ~19.6
+            (19.45 + Math.random() * 0.2).toFixed(2)  // ~19.55
+        ];
+
+        // DOM Elements
+        const elBuretLiquid = document.getElementById('buret-liquid');
+        const elFlaskLiquid = document.getElementById('flask-liquid');
+        const elDrop = document.getElementById('drop-visual');
+        const elErlenmeyer = document.getElementById('erlenmeyer');
+        const elVolDisplay = document.getElementById('vol-display');
+        const elStepStatus = document.getElementById('step-status');
+        const elKeran = document.getElementById('keran-valve');
+        const elSpill = document.getElementById('spill-effect');
+        const elPipette = document.getElementById('pipette');
+
+        // =====================================================
+        // --- SISTEM BILINGUAL ---
+        // =====================================================
+        const translations = {
+            id: {
+                header_title: "Simulasi Tahap 5: Titrasi Asam Basa",
+                header_subtitle: "Penentuan Konsentrasi Asam Jeruk (Metode Titrasi Alkalimetri)",
+                card_monitor: "Monitor Digital",
+                label_sisa: "Sisa NaOH di Buret",
+                label_vol: "Vol Keluar (\u0394V)",
+                label_status: "Status",
+                label_target: "Target",
+                target_desc: "Titrasi hingga warna berubah menjadi",
+                target_color: "Merah Muda (Pink)",
+                card_control: "Kontrol Alat",
+                step1_label: "1. Persiapan Titran:",
+                btn_fill_buret: "🧪 Tahan untuk Isi Buret (NaOH)",
+                btn_buret_ready: "✅ Buret Siap (Lanjut)",
+                step2_label: "2. Persiapan Sampel:",
+                btn_place_flask: "🖐️ Ambil & Letakkan Erlenmeyer",
+                step3_label: "3. Tambah Indikator:",
+                btn_add_pp: "💧 Teteskan 3 Tetes Indikator PP",
+                pp_added: "3 tetes indikator telah ditambahkan.",
+                step4_label: "4. Titrasi (Keran Buret):",
+                btn_titrate: "💧 Tekan & Tahan untuk Meneteskan",
+                btn_finish: "✅ Selesai (Catat Data)",
+                btn_next: "🔄 Lanjut Percobaan Berikutnya",
+                btn_calc: "🧮 Hitung Konsentrasi",
+                card_data: "Data Hasil (Triplo)",
+                th_trial: "Percobaan",
+                th_vawal: "V Awal (mL)",
+                th_vakhir: "V Akhir (mL)",
+                th_color: "Warna Akhir",
+                label_avg: "Rata-rata Volume NaOH (\u0394V)",
+                info_v1: "Vol Jeruk 10% (V1) = 25 mL",
+                info_m2: "Konsentrasi NaOH (M2) = <strong>0.1 M</strong>",
+                info_note: "*Kadar yang didapat adalah Total Asam Tertitrasi yang disetarakan sebagai Asam Sitrat.",
+                modal_title: "Kalkulator Konsentrasi Asam Sitrat",
+                modal_formula_title: "Rumus Titrasi Asam Sitrat dan NaOH",
+                modal_formula_desc: `Asam sitrat adalah asam triprotik (memiliki valensi 3). Pada titik ekuivalen berlaku:<br><br>
+                    <code style="display:block; text-align:center; background:#e8f6fd; padding:8px; border-radius:4px; color: #2980b9;">3 × M_Sitrat × V_Sitrat = M_NaOH × V_NaOH</code><br>`,
+                modal_help_data: "Data Bantuan:",
+                modal_vsitrat: "V_Sitrat (Volume Sampel) = 25 mL",
+                modal_input_label: "Masukkan Volume Rata-rata NaOH (mL):",
+                modal_placeholder: "Contoh: 19.50",
+                btn_calculate: "Hitung Konsentrasi",
+                btn_close: "Tutup",
+                // Status messages (used dynamically)
+                status_prepare: "Siapkan Alat",
+                status_filling: "Mengisi Buret...",
+                status_spill: "AWAS TUMPAH! Kelebihan cairan.",
+                status_fail: "Gagal. Buret dikosongkan, ulangi pengisian.",
+                status_buret_ready: "Buret siap digunakan.",
+                status_fill_warning: "Isi buret minimal hingga 25 mL agar cairan tidak habis saat titrasi!",
+                status_take_flask: "Ambil Erlenmeyer dari meja.",
+                status_flask_moved: "Erlenmeyer dipindahkan.",
+                status_add_pp: "Siap tambah indikator PP.",
+                status_dropping: "Meneteskan Indikator...",
+                status_pp_done: "3 tetes PP selesai ditambahkan.",
+                status_buret_empty: "Cairan Buret Habis!",
+                status_titrating: "Sedang Titrasi...",
+                status_endpoint: "Titik Akhir Tercapai",
+                status_overtitrated: "Kelebihan Titrasi!",
+                status_trial_done: "Percobaan Selesai. Lanjut?",
+                status_all_done: "Semua Percobaan Selesai.",
+                color_pink: "Pink (Sempurna)",
+                color_purple: "Ungu (Kelebihan)",
+                btn_buret_enough: "✅ Lanjut (Gunakan Sisa Buret)",
+                fill_warning_insuf: "Volume sisa tidak cukup (butuh min. 25 mL). Silakan isi ulang buret.",
+                status_enough: "Sisa NaOH cukup, bisa langsung lanjut.",
+                status_refill: "Isi ulang buret!",
+                calc_invalid_title: "❌ Input Tidak Valid",
+                calc_invalid_msg: "Silakan masukkan angka volume rata-rata NaOH terlebih dahulu.",
+                calc_check_title: "⚠️ Periksa Kembali",
+                calc_check_msg: (user, actual) => `Rata-rata yang Anda masukkan (<strong>${user} mL</strong>) kurang tepat berdasarkan data di tabel. Rata-rata Anda yang sebenarnya adalah sekitar <strong>${actual} mL</strong>.`,
+                calc_result_title: "✅ Hasil Perhitungan",
+                calc_result_msg: (vol, conc) => `Berdasarkan volume NaOH <strong>${vol} mL</strong>, konsentrasi Asam Sitrat pada sampel tersebut adalah:<br><br>
+                                  <span style="font-size: 1.4rem; font-weight: bold; color: #27ae60;">${conc} M</span>`,
+            },
+            en: {
+                header_title: "Stage 5 Simulation: Acid-Base Titration",
+                header_subtitle: "Determination of Citric Acid Concentration (Alkalimetric Titration Method)",
+                card_monitor: "Digital Monitor",
+                label_sisa: "NaOH Remaining in Burette",
+                label_vol: "Vol Out (\u0394V)",
+                label_status: "Status",
+                label_target: "Target",
+                target_desc: "Titrate until the color changes to",
+                target_color: "Pink",
+                card_control: "Instrument Controls",
+                step1_label: "1. Titrant Preparation:",
+                btn_fill_buret: "🧪 Hold to Fill Burette (NaOH)",
+                btn_buret_ready: "✅ Burette Ready (Continue)",
+                step2_label: "2. Sample Preparation:",
+                btn_place_flask: "🖐️ Take & Place Erlenmeyer Flask",
+                step3_label: "3. Add Indicator:",
+                btn_add_pp: "💧 Add 3 Drops of PP Indicator",
+                pp_added: "3 drops of indicator have been added.",
+                step4_label: "4. Titration (Burette Stopcock):",
+                btn_titrate: "💧 Press & Hold to Drip",
+                btn_finish: "✅ Done (Record Data)",
+                btn_next: "🔄 Continue to Next Trial",
+                btn_calc: "🧮 Calculate Concentration",
+                card_data: "Results Data (Triplicate)",
+                th_trial: "Trial",
+                th_vawal: "Initial V (mL)",
+                th_vakhir: "Final V (mL)",
+                th_color: "Final Color",
+                label_avg: "Average NaOH Volume (\u0394V)",
+                info_v1: "10% Orange Juice Vol (V1) = 25 mL",
+                info_m2: "NaOH Concentration (M2) = <strong>0.1 M</strong>",
+                info_note: "*The value obtained is the Total Titrated Acid expressed as Citric Acid.",
+                modal_title: "Citric Acid Concentration Calculator",
+                modal_formula_title: "Titration Formula: Citric Acid & NaOH",
+                modal_formula_desc: `Citric acid is a triprotic acid (valence 3). At the equivalence point:<br><br>
+                    <code style="display:block; text-align:center; background:#e8f6fd; padding:8px; border-radius:4px; color: #2980b9;">3 × M_Citrate × V_Citrate = M_NaOH × V_NaOH</code><br>`,
+                modal_help_data: "Reference Data:",
+                modal_vsitrat: "V_Citrate (Sample Volume) = 25 mL",
+                modal_input_label: "Enter Average NaOH Volume (mL):",
+                modal_placeholder: "Example: 19.50",
+                btn_calculate: "Calculate Concentration",
+                btn_close: "Close",
+                // Status messages (used dynamically)
+                status_prepare: "Prepare Equipment",
+                status_filling: "Filling Burette...",
+                status_spill: "WARNING SPILL! Excess liquid.",
+                status_fail: "Failed. Burette emptied, refill again.",
+                status_buret_ready: "Burette ready to use.",
+                status_fill_warning: "Fill burette to at least 25 mL to avoid running out during titration!",
+                status_take_flask: "Take Erlenmeyer flask from the bench.",
+                status_flask_moved: "Erlenmeyer flask moved.",
+                status_add_pp: "Ready to add PP indicator.",
+                status_dropping: "Adding Indicator Drops...",
+                status_pp_done: "3 drops of PP added successfully.",
+                status_buret_empty: "Burette is Empty!",
+                status_titrating: "Titrating...",
+                status_endpoint: "Endpoint Reached",
+                status_overtitrated: "Over-titrated!",
+                status_trial_done: "Trial Complete. Continue?",
+                status_all_done: "All Trials Completed.",
+                color_pink: "Pink (Perfect)",
+                color_purple: "Purple (Over-titrated)",
+                btn_buret_enough: "✅ Continue (Use Remaining)",
+                fill_warning_insuf: "Remaining volume insufficient (need min. 25 mL). Please refill the burette.",
+                status_enough: "Sufficient NaOH remaining, can continue directly.",
+                status_refill: "Refill the burette!",
+                calc_invalid_title: "❌ Invalid Input",
+                calc_invalid_msg: "Please enter the average NaOH volume first.",
+                calc_check_title: "⚠️ Please Review",
+                calc_check_msg: (user, actual) => `The average you entered (<strong>${user} mL</strong>) does not match your table data. Your actual average is approximately <strong>${actual} mL</strong>.`,
+                calc_result_title: "✅ Calculation Result",
+                calc_result_msg: (vol, conc) => `Based on NaOH volume <strong>${vol} mL</strong>, the Citric Acid concentration in this sample is:<br><br>
+                                  <span style="font-size: 1.4rem; font-weight: bold; color: #27ae60;">${conc} M</span>`,
+            }
+        };
+
+        function switchLang(lang) {
+            currentLang = lang;
+
+            // Update tombol aktif
+            document.getElementById('btn-lang-id').classList.toggle('active', lang === 'id');
+            document.getElementById('btn-lang-en').classList.toggle('active', lang === 'en');
+
+            const t = translations[lang];
+
+            // Update semua elemen dengan data-i18n
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (t[key] !== undefined && typeof t[key] === 'string') {
+                    el.innerHTML = t[key];
+                }
+            });
+
+            // Update placeholder input
+            document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+                const key = el.getAttribute('data-i18n-placeholder');
+                if (t[key] !== undefined) {
+                    el.placeholder = t[key];
+                }
+            });
+        }
+
+        function T(key, ...args) {
+            const t = translations[currentLang];
+            const val = t[key];
+            if (typeof val === 'function') return val(...args);
+            return val || key;
+        }
+        // =====================================================
+        // --- END SISTEM BILINGUAL ---
+        // =====================================================
+
+        // --- FUNGSI CUSTOM BACKGROUND ---
+        function changeBackground(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.body.style.backgroundImage = `url('${e.target.result}')`;
+                    document.body.style.backgroundSize = 'cover';
+                    document.body.style.backgroundPosition = 'center';
+                    document.body.style.backgroundAttachment = 'fixed';
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // --- FUNGSI UI TABEL ---
+        function highlightRow(index) {
+            // Hapus sorotan dari semua baris
+            for (let i = 1; i <= TRIALS; i++) {
+                const row = document.getElementById(`row-${i}`);
+                if (row) row.classList.remove('active-row');
+            }
+            // Tambahkan sorotan pada baris yang aktif
+            const activeRow = document.getElementById(`row-${index}`);
+            if (activeRow) activeRow.classList.add('active-row');
+        }
+
+        // --- FUNGSI UTAMA (ALUR SIMULASI) ---
+
+        // TAHAP 1: Mengisi Buret
+        function startFillBuret() {
+            if (buretFillVol >= BURET_MAX_VOL) return;
+            isFilling = true;
+            document.getElementById('fill-msg').style.display = 'none';
+            elStepStatus.innerText = T('status_filling');
+            
+            function fillTick() {
+                if (!isFilling) return;
+                buretFillVol += 0.4; // Kecepatan isi
+                
+                // Update visual buret (0 to 100%)
+                const percentFilled = (buretFillVol / BURET_MAX_VOL) * 100;
+                elBuretLiquid.style.height = `${Math.min(percentFilled, 100)}%`;
+                
+                // Update tampilan sisa di buret
+                document.getElementById('sisa-display').innerText = Math.min(buretFillVol, BURET_MAX_VOL).toFixed(2);
+
+                if (buretFillVol > BURET_MAX_VOL) {
+                    // Tumpah jika melewati batas
+                    elSpill.classList.add('active');
+                    elStepStatus.innerText = T('status_spill');
+                    elStepStatus.style.color = "red";
+                }
+
+                animationId = requestAnimationFrame(fillTick);
+            }
+            fillTick();
+        }
+
+        function stopFillBuret() {
+            isFilling = false;
+            cancelAnimationFrame(animationId);
+            
+            if (buretFillVol > BURET_MAX_VOL) {
+                // Hukuman jika tumpah: Harus ulang isi dari awal
+                setTimeout(() => {
+                    buretFillVol = 0;
+                    elBuretLiquid.style.height = "0%";
+                    elSpill.classList.remove('active');
+                    elStepStatus.innerText = T('status_fail');
+                }, 1500);
+            } else if (buretFillVol >= 25) {
+                // Sukses terisi cukup (minimal 25mL agar tidak kehabisan)
+                document.getElementById('btn-to-step2').style.display = 'inline-block';
+                document.getElementById('btn-to-step2').innerText = T('btn_buret_ready');
+                document.getElementById('fill-msg').style.display = 'none';
+                elStepStatus.innerText = T('status_buret_ready');
+                elStepStatus.style.color = "#0f0";
+            } else {
+                document.getElementById('btn-to-step2').style.display = 'none';
+                document.getElementById('fill-msg').innerText = T('status_fill_warning');
+                document.getElementById('fill-msg').style.display = 'block';
+            }
+        }
+
+        function nextToStep2() {
+            document.getElementById('ctrl-step1').style.display = 'none';
+            document.getElementById('ctrl-step2').style.display = 'block';
+            elStepStatus.innerText = T('status_take_flask');
+        }
+
+        // TAHAP 2: Memindahkan Erlenmeyer
+        function placeFlask() {
+            elErlenmeyer.classList.add('placed'); // Memicu CSS Transition bergerak ke kiri
+            elStepStatus.innerText = T('status_flask_moved');
+            
+            setTimeout(() => {
+                document.getElementById('ctrl-step2').style.display = 'none';
+                document.getElementById('ctrl-step3').style.display = 'block';
+                elStepStatus.innerText = T('status_add_pp');
+            }, 1500); // Tunggu sampai animasi bergeser selesai
+        }
+
+        // TAHAP 3: Meneteskan Indikator
+        function addIndicator() {
+            document.getElementById('btn-add-pp').disabled = true;
+            elStepStatus.innerText = T('status_dropping');
+            
+            // Munculkan pipet dari atas
+            elPipette.classList.add('active');
+            
+            setTimeout(() => {
+                // Animasi tetesan dari pipet yang dikontrol JS (Pasti 3 tetes)
+                const drop = document.getElementById('pipette-drop');
+                let dropsCount = 0;
+                
+                function dropOne() {
+                    drop.classList.remove('anim-pipette-drip');
+                    void drop.offsetWidth; // reset animasi CSS
+                    drop.classList.add('anim-pipette-drip');
+                    dropsCount++;
+                    
+                    if (dropsCount < 3) {
+                        setTimeout(dropOne, 600); // Lanjut tetes berikutnya
+                    } else {
+                        setTimeout(() => {
+                            elPipette.classList.remove('active'); // Sembunyikan pipet
+                            document.getElementById('pp-msg').style.display = 'block';
+                            document.getElementById('pp-msg').innerHTML = T('pp_added');
+                            elStepStatus.innerText = T('status_pp_done');
+                            
+                            setTimeout(() => {
+                                document.getElementById('ctrl-step3').style.display = 'none';
+                                document.getElementById('ctrl-step4').style.display = 'block';
+                                highlightRow(currentTrial);
+                            }, 1000);
+                        }, 600); // Jeda setelah tetes terakhir
+                    }
+                }
+                
+                dropOne(); // Mulai tetesan pertama
+            }, 600); // Jeda pipet muncul sebelum tetesan pertama
+        }
+
+        // TAHAP 4: Proses Titrasi
+        function updateDisplay() {
+            // Update Buret: Tinggi cairan berkurang sesuai tetesan
+            const remainingVol = buretFillVol - currentVol;
+            const percentRemaining = (remainingVol / BURET_MAX_VOL) * 100;
+            elBuretLiquid.style.height = `${Math.max(percentRemaining, 0)}%`;
+
+            // Update Flask: Volume cairan bertambah secara visual
+            const addedHeight = currentVol * 1.5; 
+            elFlaskLiquid.style.height = `${INITIAL_FLASK_VOL + addedHeight}px`;
+            
+            // Text Display
+            document.getElementById('sisa-display').innerText = Math.max(remainingVol, 0).toFixed(2);
+            elVolDisplay.innerText = currentVol.toFixed(2);
+
+            // Logika Perubahan Warna
+            const target = parseFloat(targets[currentTrial - 1]);
+            if (currentVol >= target + 0.5) {
+                elFlaskLiquid.style.backgroundColor = 'var(--color-over)';
+                elStepStatus.innerText = T('status_overtitrated');
+                elStepStatus.style.color = "red";
+            } else if (currentVol >= target) {
+                elFlaskLiquid.style.backgroundColor = 'var(--color-pink)';
+                elStepStatus.innerText = T('status_endpoint');
+                elStepStatus.style.color = "hotpink";
+                document.getElementById('btn-finish').disabled = false;
+            } else {
+                elFlaskLiquid.style.backgroundColor = 'var(--color-jeruk)';
+                elStepStatus.innerText = T('status_titrating');
+                elStepStatus.style.color = "#0f0";
+            }
+        }
+
+        function startTitration() {
+            if (isTitrating) return;
+            if (buretFillVol - currentVol <= 0) {
+                elStepStatus.innerText = T('status_buret_empty');
+                return;
+            }
+            
+            isTitrating = true;
+            elKeran.style.transform = "rotate(90deg)"; // Buka keran
+            elDrop.classList.add('anim-drip');
+            elDrop.style.opacity = 1;
+            elErlenmeyer.classList.add('anim-shake'); // Goyang
+
+            function tick() {
+                if (!isTitrating) return;
+                
+                currentVol += 0.05; 
+                
+                if (currentVol >= buretFillVol) {
+                    stopTitration(); // Otomatis berhenti jika buret kosong
+                    return;
+                }
+
+                updateDisplay();
+                animationId = requestAnimationFrame(tick);
+            }
+            tick();
+        }
+
+        function stopTitration() {
+            isTitrating = false;
+            cancelAnimationFrame(animationId);
+            elKeran.style.transform = "rotate(0deg)";
+            elDrop.classList.remove('anim-drip');
+            elDrop.style.opacity = 0;
+            elErlenmeyer.classList.remove('anim-shake');
+        }
+
+        function finishTrial() {
+            const target = parseFloat(targets[currentTrial - 1]);
+            let colorResult = T('color_pink');
+            let colorStyle = "color:hotpink";
+
+            if (currentVol > target + 0.5) {
+                colorResult = T('color_purple');
+                colorStyle = "color:purple";
+            }
+
+            trialData.push(currentVol);
+            
+            const row = document.getElementById(`row-${currentTrial}`);
+            // Mengisi kolom V Awal (Volume buret sebelum titrasi dimulai), V Akhir (Sisa), Delta V (Keluaran)
+            const vAwal = buretFillVol;
+            const vAkhir = Math.max(0, buretFillVol - currentVol);
+            
+            row.cells[1].innerText = vAwal.toFixed(2);
+            row.cells[2].innerText = vAkhir.toFixed(2);
+            row.cells[3].innerText = currentVol.toFixed(2);
+            row.cells[4].innerHTML = `<span style="${colorStyle}">${colorResult}</span>`;
+            row.classList.remove('active-row');
+
+            // Update Rata-rata Volume
+            const sum = trialData.reduce((a, b) => a + b, 0);
+            const currentAvg = sum / trialData.length;
+            document.getElementById('avg-vol-display').innerText = currentAvg.toFixed(2);
+
+            document.getElementById('btn-finish').style.display = 'none';
+            
+            if (currentTrial < TRIALS) {
+                document.getElementById('btn-next').style.display = 'block';
+                document.getElementById('btn-next').innerHTML = T('btn_next');
+                elStepStatus.innerText = T('status_trial_done');
+            } else {
+                document.getElementById('btn-calc').style.display = 'block';
+                document.getElementById('btn-calc').innerHTML = T('btn_calc');
+                elStepStatus.innerText = T('status_all_done');
+            }
+        }
+
+        function resetFlask() {
+            // Set volume awal untuk percobaan berikutnya berdasarkan sisa NaOH sebelumnya
+            buretFillVol = Math.max(0, buretFillVol - currentVol); 
+            currentVol = 0;
+            currentTrial++;
+            
+            // Reset Posisi dan Visual Erlenmeyer
+            elErlenmeyer.classList.remove('placed'); // Kembalikan ke meja samping
+            elFlaskLiquid.style.backgroundColor = 'var(--color-jeruk)';
+            elFlaskLiquid.style.height = `${INITIAL_FLASK_VOL}px`;
+            
+            // Perbarui visual Buret sesuai dengan sisa cairan
+            const percentRemaining = (buretFillVol / BURET_MAX_VOL) * 100;
+            elBuretLiquid.style.height = `${percentRemaining}%`;
+            document.getElementById('sisa-display').innerText = buretFillVol.toFixed(2);
+            elVolDisplay.innerText = "0.00";
+            
+            // Reset UI Kontrol
+            document.getElementById('btn-add-pp').disabled = false;
+            document.getElementById('pp-msg').style.display = 'none';
+            
+            // Tampilkan Step 1 lagi
+            document.getElementById('ctrl-step4').style.display = 'none';
+            document.getElementById('ctrl-step1').style.display = 'block';
+            document.getElementById('btn-next').style.display = 'none';
+            document.getElementById('btn-finish').style.display = 'inline-block';
+            document.getElementById('btn-finish').disabled = true;
+            
+            highlightRow(currentTrial);
+
+            // Logika Cek Sisa Cairan Buret untuk Step 1
+            if (buretFillVol >= 25) {
+                document.getElementById('btn-to-step2').style.display = 'inline-block';
+                document.getElementById('btn-to-step2').innerText = T('btn_buret_enough');
+                document.getElementById('fill-msg').style.display = 'none';
+                elStepStatus.innerText = `${currentLang === 'id' ? 'Percobaan' : 'Trial'} ${currentTrial}: ${T('status_enough')}`;
+            } else {
+                document.getElementById('btn-to-step2').style.display = 'none';
+                document.getElementById('fill-msg').innerText = T('fill_warning_insuf');
+                document.getElementById('fill-msg').style.display = 'block';
+                elStepStatus.innerText = `${currentLang === 'id' ? 'Percobaan' : 'Trial'} ${currentTrial}: ${T('status_refill')}`;
+            }
+        }
+
+        // --- KALKULASI ---
+        function showCalculation() {
+            // Reset input dan hasil saat modal dibuka
+            document.getElementById('user-avg-vol').value = '';
+            document.getElementById('calc-result').style.display = 'none';
+            document.getElementById('calc-modal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('calc-modal').style.display = 'none';
+        }
+
+        function calculateConcentration() {
+            const sum = trialData.reduce((a, b) => a + b, 0);
+            const actualAvg = sum / trialData.length;
+            
+            // Input User
+            const userAvgVol = parseFloat(document.getElementById('user-avg-vol').value);
+            const resultBox = document.getElementById('calc-result');
+            const feedback = document.getElementById('calc-feedback');
+            const resultTitle = document.getElementById('calc-title');
+            
+            if (isNaN(userAvgVol)) {
+                resultBox.style.display = 'block';
+                resultBox.style.borderColor = '#e74c3c';
+                resultBox.style.background = '#fadbd8';
+                resultTitle.innerHTML = T('calc_invalid_title');
+                resultTitle.style.color = '#c0392b';
+                feedback.innerHTML = T('calc_invalid_msg');
+                return;
+            }
+
+            // Cek apakah mahasiswa memasukkan rata-rata yang benar dari tabel mereka sendiri
+            if (Math.abs(userAvgVol - actualAvg) > 0.1) {
+                resultBox.style.display = 'block';
+                resultBox.style.borderColor = '#f39c12';
+                resultBox.style.background = '#fdebd0';
+                resultTitle.innerHTML = T('calc_check_title');
+                resultTitle.style.color = '#d35400';
+                feedback.innerHTML = T('calc_check_msg', userAvgVol, actualAvg.toFixed(2));
+                return;
+            }
+
+            // Kalkulasi Konsentrasi: M_Sitrat = (M_NaOH * V_NaOH) / (3 * V_Sitrat)
+            const mSitrat = (M2_NAOH * userAvgVol) / (3 * V1_JERUK);
+
+            // Tampilkan Hasil Sukses
+            resultBox.style.display = 'block';
+            resultBox.style.borderColor = '#2ecc71';
+            resultBox.style.background = '#e8f8f5';
+            resultTitle.innerHTML = T('calc_result_title');
+            resultTitle.style.color = '#27ae60';
+            feedback.innerHTML = T('calc_result_msg', userAvgVol, mSitrat.toFixed(4));
+        }
+
+        // Inisialisasi tampilan awal
+        window.onload = () => {
+            highlightRow(currentTrial);
+            // Set placeholder input modal sesuai bahasa default
+            document.getElementById('user-avg-vol').placeholder = translations.id.modal_placeholder;
+        };
+    </script>
+</body>
+</html>

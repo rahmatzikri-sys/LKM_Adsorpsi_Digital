@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulasi Interaktif – Anatomi & Komposisi Pohon Sawit</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --forest:      #162e1e;
+            --green:       #2d6a4f;
+            --green-mid:   #40916c;
+            --green-lt:    #52b788;
+            --green-pale:  #d8f3dc;
+            --amber:       #d4a017;
+            --amber-lt:    #f4d03f;
+            --parchment:   #f5f0e0;
+            --cream:       #faf8f2;
+            --text:        #1a2e1a;
+            --text-lt:     #4a6741;
+            --white:       #ffffff;
+        }
+        *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);min-height:100vh;overflow-x:hidden;}
+
+        /* ── BILINGUAL SYSTEM ── */
+        .en { display: none; }
+        body.lang-en .id { display: none; }
+        body.lang-en .en { display: inline; } /* Default to inline */
+        body.lang-en div.en, body.lang-en p.en { display: block; }
+        
+        /* ── HEADER ── */
+        .header{background:var(--forest);padding:16px 32px;display:flex;align-items:center;justify-content:space-between;position:relative;overflow:hidden;}
+        .header::after{content:'';position:absolute;top:-60%;right:-4%;width:260px;height:260px;background:radial-gradient(circle,rgba(212,160,23,.18) 0%,transparent 65%);pointer-events:none;}
+        .hdr-title{font-family:'Playfair Display',serif;font-size:clamp(.95rem,2vw,1.3rem);color:#fff;}
+        .hdr-sub{font-size:.65rem;color:rgba(255,255,255,.48);letter-spacing:2.5px;text-transform:uppercase;margin-top:3px;}
+        
+        .hdr-right{display:flex;align-items:center;gap:12px;z-index:10;}
+        .hdr-badge{background:rgba(212,160,23,.18);border:1px solid rgba(212,160,23,.45);color:var(--amber-lt);padding:5px 16px;border-radius:30px;font-size:.68rem;font-weight:600;letter-spacing:1.4px;}
+        .lang-switch{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;padding:4px 12px;border-radius:20px;font-size:.7rem;cursor:pointer;transition:background .3s;}
+        .lang-switch:hover{background:rgba(255,255,255,.2);}
+        .lang-switch span{opacity:0.4;transition:opacity .3s;}
+        .lang-switch span.active{opacity:1;font-weight:700;}
+
+        /* ── LAYOUT ── */
+        .main{display:grid;grid-template-columns:1fr 1fr;min-height:calc(100vh - 64px);}
+
+        /* ── TREE STAGE ── */
+        .stage{position:relative;background:linear-gradient(180deg,#b8dfc8 0%,#caebd8 28%,#daf0e0 50%,#c8b878 70%,#b09050 80%,#987840 100%);display:flex;align-items:center;justify-content:center;overflow:hidden;padding:16px 8px 8px;min-height:580px;isolation:isolate;}
+        .stage::before{content:'';position:absolute;inset:0;background-image:radial-gradient(circle,rgba(26,58,37,.04) 1px,transparent 1px);background-size:24px 24px;pointer-events:none;}
+
+        /* ── TREE WRAP ── */
+        .tree-wrap{position:relative;width:100%;max-width:390px;transform-origin:50% 36%;transition:transform .9s cubic-bezier(.25,.46,.45,.94);z-index:2;}
+        .tree-wrap.zoom-pelepah{transform:scale(2.2) translateY(16%);}
+        .tree-wrap.zoom-tandan {transform:scale(2.6) translateY(5%);}
+        .tree-wrap.zoom-buah   {transform:scale(2.8) translateY(4%);}
+        .tree-wrap.zoom-batang {transform:scale(1.8) translateY(-2%);}
+        .tree-wrap.zoom-akar   {transform:scale(2.2) translateY(-30%);}
+        .tree-wrap.zoom-tanah  {transform:scale(2.0) translateY(-28%);}
+        .tree-wrap svg{width:100%;height:auto;display:block;}
+
+        /* ── SVG PARTS ── */
+        .svgPart{cursor:pointer;}
+        .svgPart:hover{opacity:.82;transition:opacity .25s;}
+
+        /* ── FLOATING LABELS ── */
+        .lbl{position:absolute;display:flex;align-items:center;gap:6px;cursor:pointer;z-index:15;transition:opacity .4s;}
+        .lbl-dot{width:11px;height:11px;border-radius:50%;background:var(--amber);border:2px solid #fff;box-shadow:0 0 0 3px rgba(212,160,23,.3);animation:pulseA 2.2s ease-in-out infinite;flex-shrink:0;}
+        .lbl.gn .lbl-dot{background:#52b788;box-shadow:0 0 0 3px rgba(82,183,136,.32);animation-name:pulseG;}
+        .lbl.bl .lbl-dot{background:#4a90d9;box-shadow:0 0 0 3px rgba(74,144,217,.32);animation-name:pulseB;}
+        @keyframes pulseA{0%,100%{box-shadow:0 0 0 3px rgba(212,160,23,.3)}50%{box-shadow:0 0 0 9px rgba(212,160,23,0)}}
+        @keyframes pulseG{0%,100%{box-shadow:0 0 0 3px rgba(82,183,136,.3)}50%{box-shadow:0 0 0 9px rgba(82,183,136,0)}}
+        @keyframes pulseB{0%,100%{box-shadow:0 0 0 3px rgba(74,144,217,.3)}50%{box-shadow:0 0 0 9px rgba(74,144,217,0)}}
+        .lbl-txt{background:var(--forest);color:#fff;padding:3px 11px;border-radius:20px;font-size:.67rem;font-weight:600;letter-spacing:.3px;white-space:nowrap;box-shadow:0 3px 12px rgba(0,0,0,.22);transition:background .25s;}
+        .lbl:hover .lbl-txt{background:var(--green);}
+        .lbl.gn .lbl-txt{background:#1a5c3a;}
+        .lbl.gn:hover .lbl-txt{background:var(--green-lt);}
+        .lbl.bl .lbl-txt{background:#1c3f6e;}
+        .lbl.bl:hover .lbl-txt{background:#2d6aa0;}
+
+        /* label positions (Sesuai aslinya) */
+        .lbl-pelepah { top: 22% !important; left: 43% !important; right: auto !important; }
+        .lbl-tandan { top: 35% !important; left: 38% !important; right: auto !important; }
+        .lbl-buah { top: 40% !important; left: 23% !important; right: auto !important; }
+        .lbl-batang { top: 52% !important; left: 43% !important; right: auto !important; }
+        .lbl-tanah { bottom: 25% !important; left: 10% !important; right: auto !important; }
+        .lbl-akar { bottom: 22% !important; left: 43% !important; right: auto !important; }
+
+        /* ── BACK BTN ── */
+        .btn-back{display:none;position:absolute;top:12px;left:12px;z-index:20;background:var(--forest);color:#fff;border:none;padding:6px 14px;border-radius:18px;font-family:'DM Sans',sans-serif;font-size:.7rem;font-weight:500;cursor:pointer;align-items:center;gap:5px;transition:background .25s;}
+        .btn-back.show{display:flex;}
+        .btn-back:hover{background:var(--green);}
+
+        /* hint */
+        .hint{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);background:rgba(22,46,30,.72);color:rgba(255,255,255,.9);padding:6px 16px;border-radius:18px;font-size:.64rem;letter-spacing:.4px;white-space:nowrap;pointer-events:none;transition:opacity .4s;}
+
+        /* overlay inside stage */
+        .overlay{display:none;position:absolute;inset:0;background:rgba(22,46,30,.32);z-index:3;pointer-events:none;}
+        .overlay.on{display:block;}
+
+        /* ── INFO PANEL ── */
+        .info-panel{background:var(--white);padding:34px 30px;display:flex;flex-direction:column;justify-content:center;border-left:1px solid rgba(26,58,37,.08);position:relative;overflow-y:auto;max-height:calc(100vh - 64px);}
+
+        /* default */
+        .p-default{text-align:center;}
+        .p-icon{font-size:3rem;margin-bottom:12px;}
+        .p-title{font-family:'Playfair Display',serif;font-size:1.65rem;color:var(--forest);margin-bottom:8px;}
+        .p-desc{color:var(--text-lt);font-size:.81rem;line-height:1.74;max-width:285px;margin:0 auto;}
+        .tip-list{margin-top:20px;display:flex;flex-direction:column;gap:7px;text-align:left;}
+        .tip-item{display:flex;align-items:center;gap:10px;background:var(--parchment);padding:9px 13px;border-radius:10px;}
+        .tip-item.gn{background:#edfbf1;border:1px solid #c3edd0;}
+        .tip-item.bl{background:#eef4fc;border:1px solid #c3d9f0;}
+        .tip-icon{font-size:1.15rem;flex-shrink:0;}
+        .tip-text{font-size:.73rem;color:var(--text-lt);}
+
+        /* cards */
+        .icard{display:none;animation:slideUp .4s ease;}
+        .icard.active{display:block;}
+        @keyframes slideUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+
+        .tag{display:inline-block;background:var(--green-pale);color:var(--green);padding:3px 12px;border-radius:18px;font-size:.62rem;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;margin-bottom:11px;}
+        .tag.amber{background:#fff5d6;color:#9a6e00;}
+        .tag.blue{background:#e8f0fb;color:#1c3f6e;}
+
+        .c-title{font-family:'Playfair Display',serif;font-size:1.72rem;color:var(--forest);line-height:1.2;margin-bottom:9px;}
+        .c-body{color:var(--text-lt);font-size:.81rem;line-height:1.76;margin-bottom:15px;}
+
+        /* stat boxes */
+        .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:15px;}
+        .stat-box{background:var(--parchment);padding:11px 9px;border-radius:10px;text-align:center;}
+        .stat-box.or{background:#fff8f0;}
+        .stat-box.bl{background:#eef4fc;}
+        .stat-num{font-family:'Playfair Display',serif;font-size:1.35rem;color:var(--forest);}
+        .stat-num.or{color:#b84000;}
+        .stat-num.gn{color:#1a5c3a;}
+        .stat-num.bl{color:#1c3f6e;}
+        .stat-lbl{font-size:.61rem;color:var(--text-lt);margin-top:2px;}
+
+        /* composition bars */
+        .comp-header{font-size:.62rem;font-weight:700;color:var(--forest);letter-spacing:1.4px;text-transform:uppercase;padding-bottom:9px;border-bottom:2px solid var(--green-pale);margin-bottom:13px;}
+        .comp-item{margin-bottom:13px;}
+        .comp-row{display:flex;justify-content:space-between;margin-bottom:5px;align-items:baseline;}
+        .comp-name{font-weight:600;font-size:.79rem;color:var(--forest);}
+        .comp-pct{font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--green);}
+        .comp-sub{font-size:.62rem;color:#aaa;margin-top:3px;}
+        .bar-bg{height:8px;background:var(--green-pale);border-radius:4px;overflow:hidden;}
+        .bar-fill{height:100%;border-radius:4px;width:0;transition:width 1.1s cubic-bezier(.25,.46,.45,.94);}
+        .bar-fill.cel{background:linear-gradient(90deg,#2d6a4f,#52b788);transition-delay:.25s;}
+        .bar-fill.hem{background:linear-gradient(90deg,#40916c,#74c69d);transition-delay:.5s;}
+        .bar-fill.lig{background:linear-gradient(90deg,#b8860b,#f4d03f);transition-delay:.75s;}
+        .source{font-size:.65rem;font-style:italic;color:#bbb;border-top:1px solid #f0f0f0;padding-top:9px;margin-top:4px;}
+
+        /* sample btn */
+        .btn-sample{margin-top:16px;width:100%;background:linear-gradient(135deg,var(--forest),var(--green));color:#fff;border:none;padding:12px 18px;border-radius:11px;font-family:'DM Sans',sans-serif;font-size:.82rem;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .3s;box-shadow:0 7px 20px rgba(26,58,37,.27);}
+        .btn-sample:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 11px 28px rgba(26,58,37,.35);}
+        .btn-sample:disabled{background:#ccd8cc;color:#6a8a6a;cursor:not-allowed;box-shadow:none;transform:none;}
+        .sample-ok{display:none;margin-top:11px;background:#edfbf1;border:1px solid #a8e6c0;color:#1a5c3a;padding:10px 14px;border-radius:10px;font-size:.75rem;font-weight:500;text-align:center;animation:slideUp .4s ease;}
+        .sample-ok.show{display:block;}
+
+        /* toast */
+        .toast{position:fixed;bottom:-90px;left:50%;transform:translateX(-50%);background:var(--forest);color:#fff;padding:11px 20px;border-radius:14px;font-size:.81rem;font-weight:500;display:flex;align-items:center;gap:10px;box-shadow:0 14px 42px rgba(0,0,0,.32);z-index:1000;white-space:nowrap;transition:bottom .55s cubic-bezier(.25,.46,.45,.94);}
+        .toast.show{bottom:22px;}
+
+        /* flying leaf */
+        .fly-leaf{position:fixed;font-size:1.8rem;z-index:999;pointer-events:none;display:none;}
+
+        /* ── RESPONSIVE ── */
+        @media(max-width:780px){
+            .main{grid-template-columns:1fr;}
+            .stage{min-height:420px;padding:28px 8px 18px;}
+            .info-panel{padding:22px 16px;border-left:none;border-top:1px solid rgba(26,58,37,.08);max-height:none;}
+            .tree-wrap.zoom-pelepah{transform:scale(1.9) translateY(14%);}
+            .tree-wrap.zoom-tandan{transform:scale(2.1) translateY(4%);}
+            .tree-wrap.zoom-buah{transform:scale(2.3) translateY(2%);}
+            .tree-wrap.zoom-batang{transform:scale(1.6) translateY(-1%);}
+            .tree-wrap.zoom-akar{transform:scale(1.9) translateY(-24%);}
+            .tree-wrap.zoom-tanah{transform:scale(1.8) translateY(-22%);}
+            .hdr-badge{display:none;}
+        }
+        @media(max-width:420px){.lbl-txt{display:none;}}
+    </style>
+</head>
+<body>
+
+<header class="header">
+    <div>
+        <div class="hdr-title">
+            <span class="id">🌴 Anatomi & Komposisi Pohon Sawit</span>
+            <span class="en">🌴 Anatomy & Composition of Oil Palm</span>
+        </div>
+        <div class="hdr-sub">
+            <span class="id">Simulasi Interaktif · Media Pembelajaran Sains</span>
+            <span class="en">Interactive Simulation · Science Learning Media</span>
+        </div>
+    </div>
+    <div class="hdr-right">
+        <!-- TOMBOL BILINGUAL -->
+        <div class="lang-switch" onclick="toggleLang()">
+            <span id="langIdBtn" class="active">ID</span> | <span id="langEnBtn">EN</span>
+        </div>
+        <div class="hdr-badge">
+            <span class="id">🔬 INTERAKTIF</span>
+            <span class="en">🔬 INTERACTIVE</span>
+        </div>
+    </div>
+</header>
+
+<main class="main">
+
+<!-- ▌ TREE STAGE ▐ -->
+<section class="stage" id="treeStage">
+    <button class="btn-back" id="btnBack" onclick="resetView()">
+        <span class="id">← Kembali</span>
+        <span class="en">← Back</span>
+    </button>
+
+    <div class="tree-wrap" id="treeWrap">
+        <img src="sawit.png.png" style="width:100%; height:auto; border-radius:12px; display:block;" />
+        <!-- ══ Floating Labels ══ -->
+        <div class="lbl lbl-pelepah gn" onclick="showInfo('pelepah')">
+            <div class="lbl-dot"></div>
+            <div class="lbl-txt"><span class="id">Pelepah ✦</span><span class="en">Frond ✦</span></div>
+        </div>
+        <div class="lbl lbl-tandan" onclick="showInfo('tandan')">
+            <div class="lbl-dot"></div>
+            <div class="lbl-txt"><span class="id">Tandan</span><span class="en">Bunch</span></div>
+        </div>
+        <div class="lbl lbl-buah" onclick="showInfo('buah')">
+            <div class="lbl-dot"></div>
+            <div class="lbl-txt"><span class="id">Buah</span><span class="en">Fruit</span></div>
+        </div>
+        <div class="lbl lbl-batang" onclick="showInfo('batang')">
+            <div class="lbl-dot"></div>
+            <div class="lbl-txt"><span class="id">Batang</span><span class="en">Trunk</span></div>
+        </div>
+        <div class="lbl lbl-tanah bl" onclick="showInfo('tanah')">
+            <div class="lbl-dot"></div>
+            <div class="lbl-txt"><span class="id">Tanah</span><span class="en">Soil</span></div>
+        </div>
+        <div class="lbl lbl-akar bl" onclick="showInfo('akar')">
+            <div class="lbl-dot"></div>
+            <div class="lbl-txt"><span class="id">Akar</span><span class="en">Root</span></div>
+        </div>
+    </div>
+
+    <div class="hint" id="stageHint">
+        <span class="id">👆 Klik 6 bagian pohon untuk info lengkap</span>
+        <span class="en">👆 Click 6 parts of the tree for full info</span>
+    </div>
+    <div class="overlay" id="overlay" onclick="resetView()"></div>
+</section>
+
+<!-- ▌ INFO PANEL ▐ -->
+<section class="info-panel" id="infoPanel">
+
+    <!-- DEFAULT -->
+    <div class="p-default" id="panelDefault">
+        <div class="p-icon">🌴</div>
+        <div class="p-title">
+            <span class="id">Pohon Kelapa Sawit</span>
+            <span class="en">Oil Palm Tree</span>
+        </div>
+        <div class="p-desc">
+            <span class="id">Klik 6 bagian pohon sawit untuk mempelajari anatomi dan komposisinya secara mendalam.</span>
+            <span class="en">Click the 6 parts of the oil palm tree to study its anatomy and composition in depth.</span>
+        </div>
+        <div class="tip-list">
+            <div class="tip-item gn">
+                <span class="tip-icon">🌿</span>
+                <span class="tip-text id">Klik <strong>Pelepah ✦</strong> — komposisi lignoselulosa</span>
+                <span class="tip-text en">Click <strong>Frond ✦</strong> — lignocellulosic composition</span>
+            </div>
+            <div class="tip-item">
+                <span class="tip-icon">🌾</span>
+                <span class="tip-text id">Klik <strong>Tandan</strong> — struktur tandan buah segar</span>
+                <span class="tip-text en">Click <strong>Bunch</strong> — fresh fruit bunch structure</span>
+            </div>
+            <div class="tip-item">
+                <span class="tip-icon">🍊</span>
+                <span class="tip-text id">Klik <strong>Buah</strong> — kandungan & rendemen minyak</span>
+                <span class="tip-text en">Click <strong>Fruit</strong> — oil content & yield</span>
+            </div>
+            <div class="tip-item">
+                <span class="tip-icon">🪵</span>
+                <span class="tip-text id">Klik <strong>Batang</strong> — fungsi struktural & vaskular</span>
+                <span class="tip-text en">Click <strong>Trunk</strong> — structural & vascular function</span>
+            </div>
+            <div class="tip-item bl">
+                <span class="tip-icon">🌍</span>
+                <span class="tip-text id">Klik <strong>Tanah</strong> — kondisi ideal pertumbuhan sawit</span>
+                <span class="tip-text en">Click <strong>Soil</strong> — ideal palm growth conditions</span>
+            </div>
+            <div class="tip-item bl">
+                <span class="tip-icon">🌱</span>
+                <span class="tip-text id">Klik <strong>Akar</strong> — sistem perakaran sawit</span>
+                <span class="tip-text en">Click <strong>Root</strong> — palm rooting system</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── PELEPAH ★ ── -->
+    <div class="icard" id="cardPelepah">
+        <div class="tag">
+            <span class="id">Komposisi · Lignoselulosa</span>
+            <span class="en">Composition · Lignocellulose</span>
+        </div>
+        <div class="c-title">
+            <span class="id">Pelepah Sawit</span>
+            <span class="en">Palm Frond</span>
+        </div>
+        <div class="c-body">
+            <span class="id">Pelepah sawit merupakan biomassa lignoselulosa yang melimpah dan berpotensi besar sebagai bahan baku bioenergi serta material karbon.</span>
+            <span class="en">Palm fronds are an abundant lignocellulosic biomass with great potential as a raw material for bioenergy and carbon materials.</span>
+        </div>
+        <div class="comp-header">🌿 PALM FRONDS — 3 LARGEST CONSTITUENT COMPOUNDS</div>
+        <div class="comp-item">
+            <div class="comp-row"><span class="comp-name">Cellulose</span><span class="comp-pct">31.5%</span></div>
+            <div class="bar-bg"><div class="bar-fill cel" id="fCel"></div></div>
+            <div class="comp-sub">
+                <span class="id">Polimer glukosa linier — penyusun dinding sel utama</span>
+                <span class="en">Linear glucose polymer — main cell wall constituent</span>
+            </div>
+        </div>
+        <div class="comp-item">
+            <div class="comp-row"><span class="comp-name">Hemicellulose</span><span class="comp-pct">19.20%</span></div>
+            <div class="bar-bg"><div class="bar-fill hem" id="fHem"></div></div>
+            <div class="comp-sub">
+                <span class="id">Polimer heterogen — mengikat selulosa &amp; lignin</span>
+                <span class="en">Heterogeneous polymer — binds cellulose &amp; lignin</span>
+            </div>
+        </div>
+        <div class="comp-item">
+            <div class="comp-row"><span class="comp-name">Lignin</span><span class="comp-pct">14%</span></div>
+            <div class="bar-bg"><div class="bar-fill lig" id="fLig"></div></div>
+            <div class="comp-sub">
+                <span class="id">Polimer aromatik — memberikan rigiditas struktural</span>
+                <span class="en">Aromatic polymer — provides structural rigidity</span>
+            </div>
+        </div>
+        <div class="source">
+            <span class="id">📚 Sumber: Zikri et al., 2025</span>
+            <span class="en">📚 Source: Zikri et al., 2025</span>
+        </div>
+        <button class="btn-sample" id="btnSample" onclick="takeSample()">
+            <span class="id">🧪 Ambil Sampel Pelepah</span>
+            <span class="en">🧪 Take Frond Sample</span>
+        </button>
+        <div class="sample-ok" id="sampleOk">
+            <span class="id">✅ Sampel tersimpan di Tas Sampel — Siap untuk tahap <strong>Karbonisasi</strong></span>
+            <span class="en">✅ Sample stored in Sample Bag — Ready for <strong>Carbonization</strong> stage</span>
+        </div>
+    </div>
+
+    <!-- ── TANDAN ── -->
+    <div class="icard" id="cardTandan">
+        <div class="tag amber">
+            <span class="id">Struktur · Reproduksi</span>
+            <span class="en">Structure · Reproduction</span>
+        </div>
+        <div class="c-title">
+            <span class="id">Tandan Buah Segar</span>
+            <span class="en">Fresh Fruit Bunch</span>
+        </div>
+        <div class="c-body">
+            <span class="id">Tandan Buah Segar (TBS) adalah unit hasil panen utama kelapa sawit. Tandan terbentuk dari rachis (sumbu utama) yang bercabang menjadi rachillae, tempat buah menempel secara spiral.</span>
+            <span class="en">Fresh Fruit Bunch (FFB) is the main harvested unit of oil palm. The bunch is formed from a rachis (main axis) branching into rachillae, where fruits are attached spirally.</span>
+        </div>
+        <div class="stat-grid">
+            <div class="stat-box or"><div class="stat-num or">10–40 kg</div><div class="stat-lbl id">Berat per Tandan</div><div class="stat-lbl en">Weight/Bunch</div></div>
+            <div class="stat-box or"><div class="stat-num or">8–12</div><div class="stat-lbl id">Tandan/Pohon/Tahun</div><div class="stat-lbl en">Bunches/Tree/Year</div></div>
+            <div class="stat-box or"><div class="stat-num or">1.000–3.000</div><div class="stat-lbl id">Buah per Tandan</div><div class="stat-lbl en">Fruits/Bunch</div></div>
+            <div class="stat-box or"><div class="stat-num or">5–6 bln</div><div class="stat-lbl id">Waktu Kematangan</div><div class="stat-lbl en">Maturation Time</div></div>
+        </div>
+        <div class="c-body">
+            <span class="id">Setiap rachillae mengandung buah betina yang jika terserbuki menghasilkan CPO dari mesokarp dan PKO dari inti biji.</span>
+            <span class="en">Each rachilla contains female fruits which, if pollinated, produce CPO from the mesocarp and PKO from the kernel.</span>
+        </div>
+    </div>
+
+    <!-- ── BUAH ── -->
+    <div class="icard" id="cardBuah">
+        <div class="tag amber">
+            <span class="id">Produksi · Ekonomi</span>
+            <span class="en">Production · Economy</span>
+        </div>
+        <div class="c-title">
+            <span class="id">Buah Sawit</span>
+            <span class="en">Palm Fruit</span>
+        </div>
+        <div class="c-body">
+            <span class="id">Buah sawit (drupa) memiliki tiga lapisan: eksokarp (kulit luar), mesokarp (daging buah kaya minyak), dan endokarp (cangkang keras pelindung inti/kernel).</span>
+            <span class="en">Palm fruit (drupe) has three layers: exocarp (outer skin), mesocarp (oil-rich pulp), and endocarp (hard shell protecting the kernel).</span>
+        </div>
+        <div class="stat-grid">
+            <div class="stat-box or"><div class="stat-num or">20–22%</div><div class="stat-lbl id">Rendemen CPO</div><div class="stat-lbl en">CPO Yield</div></div>
+            <div class="stat-box or"><div class="stat-num or">4–6%</div><div class="stat-lbl id">Rendemen PKO</div><div class="stat-lbl en">PKO Yield</div></div>
+            <div class="stat-box"><div class="stat-num">β-Carotene</div><div class="stat-lbl id">Antioksidan Utama</div><div class="stat-lbl en">Main Antioxidant</div></div>
+            <div class="stat-box"><div class="stat-num">Vit. E</div><div class="stat-lbl id">Tokoferol &amp; Tokotrienol</div><div class="stat-lbl en">Tocopherol &amp; Tocotrienol</div></div>
+        </div>
+        <div class="c-body">
+            <span class="id">Satu ton TBS menghasilkan rata-rata 200–230 kg CPO dan 45–55 kg PKO. CPO kaya asam palmitat (44%), asam oleat (39%), serta karotenoid alami.</span>
+            <span class="en">One ton of FFB produces an average of 200–230 kg of CPO and 45–55 kg of PKO. CPO is rich in palmitic acid (44%), oleic acid (39%), and natural carotenoids.</span>
+        </div>
+    </div>
+
+    <!-- ── BATANG ── -->
+    <div class="icard" id="cardBatang">
+        <div class="tag">
+            <span class="id">Anatomi · Struktural</span>
+            <span class="en">Anatomy · Structural</span>
+        </div>
+        <div class="c-title">
+            <span class="id">Batang Sawit</span>
+            <span class="en">Palm Trunk</span>
+        </div>
+        <div class="c-body">
+            <span class="id">Batang pohon sawit adalah struktur monopodia silindris tegak berfungsi sebagai penyangga mahkota dan jalur transportasi hara. Bekas pelepah yang gugur membentuk pola cincin khas.</span>
+            <span class="en">The palm trunk is an erect cylindrical monopodial structure serving as crown support and nutrient transport pathway. Fallen frond scars form a distinct ring pattern.</span>
+        </div>
+        <div class="stat-grid">
+            <div class="stat-box"><div class="stat-num">20–30 m</div><div class="stat-lbl id">Tinggi Maksimal</div><div class="stat-lbl en">Max Height</div></div>
+            <div class="stat-box"><div class="stat-num">25–45 cm</div><div class="stat-lbl id">Diameter Batang</div><div class="stat-lbl en">Trunk Diameter</div></div>
+            <div class="stat-box"><div class="stat-num gn">40+ thn</div><div class="stat-lbl id">Usia Produktif</div><div class="stat-lbl en">Productive Age</div></div>
+            <div class="stat-box"><div class="stat-num">Berkas</div><div class="stat-lbl id">Vaskular Tersebar</div><div class="stat-lbl en">Scattered Vascular</div></div>
+        </div>
+        <div class="c-body">
+            <span class="id">Batang mengandung banyak berkas pembuluh (vascular bundle) yang mengangkut air, mineral, dan fotosintat. Tidak ada kambium sehingga tidak terjadi pertumbuhan sekunder.</span>
+            <span class="en">The trunk contains many vascular bundles that transport water, minerals, and photosynthates. There is no cambium, hence no secondary growth occurs.</span>
+        </div>
+    </div>
+
+    <!-- ── TANAH ── -->
+    <div class="icard" id="cardTanah">
+        <div class="tag blue">
+            <span class="id">Pedologi · Lingkungan</span>
+            <span class="en">Pedology · Environment</span>
+        </div>
+        <div class="c-title">
+            <span class="id">Tanah Perkebunan Sawit</span>
+            <span class="en">Palm Plantation Soil</span>
+        </div>
+        <div class="c-body">
+            <span class="id">Kelapa sawit tumbuh optimal pada tanah latosol, podsolik merah-kuning, dan gambut dangkal. Tanah harus memiliki drainase lancar namun mampu menahan kelembapan yang cukup.</span>
+            <span class="en">Oil palm grows optimally in latosol, red-yellow podzolic, and shallow peat soils. The soil must have good drainage but be able to retain sufficient moisture.</span>
+        </div>
+        <div class="stat-grid">
+            <div class="stat-box bl"><div class="stat-num bl">4.0–6.5</div><div class="stat-lbl id">pH Tanah Optimal</div><div class="stat-lbl en">Optimal Soil pH</div></div>
+            <div class="stat-box bl"><div class="stat-num bl">&gt;60 cm</div><div class="stat-lbl id">Kedalaman Efektif</div><div class="stat-lbl en">Effective Depth</div></div>
+            <div class="stat-box bl"><div class="stat-num bl">2.000 mm</div><div class="stat-lbl id">Curah Hujan/Tahun</div><div class="stat-lbl en">Rainfall/Year</div></div>
+            <div class="stat-box bl"><div class="stat-num bl">25–28 °C</div><div class="stat-lbl id">Suhu Rata-rata</div><div class="stat-lbl en">Avg Temperature</div></div>
+        </div>
+        <div class="c-body">
+            <span class="id">Lapisan topsoil (0–30 cm) kaya bahan organik untuk nutrisi awal. Lapisan subsoil mendukung penjangkaran akar dan menampung cadangan air saat musim kering.</span>
+            <span class="en">The topsoil layer (0–30 cm) is rich in organic matter for initial nutrition. The subsoil layer supports root anchorage and holds water reserves during the dry season.</span>
+        </div>
+    </div>
+
+    <!-- ── AKAR ── -->
+    <div class="icard" id="cardAkar">
+        <div class="tag blue">
+            <span class="id">Sistem Perakaran</span>
+            <span class="en">Root System</span>
+        </div>
+        <div class="c-title">
+            <span class="id">Akar Sawit</span>
+            <span class="en">Palm Root</span>
+        </div>
+        <div class="c-body">
+            <span class="id">Sistem perakaran sawit bersifat serabut (fibrous) dengan akar primer, sekunder, tersier, dan kuartener yang menyebar luas secara lateral maupun vertikal di bawah permukaan tanah.</span>
+            <span class="en">The palm root system is fibrous with primary, secondary, tertiary, and quaternary roots spreading widely both laterally and vertically below the soil surface.</span>
+        </div>
+        <div class="stat-grid">
+            <div class="stat-box bl"><div class="stat-num bl">4–5 m</div><div class="stat-lbl id">Jangkauan Lateral</div><div class="stat-lbl en">Lateral Reach</div></div>
+            <div class="stat-box bl"><div class="stat-num bl">1–1.5 m</div><div class="stat-lbl id">Kedalaman Efektif</div><div class="stat-lbl en">Effective Depth</div></div>
+            <div class="stat-box bl"><div class="stat-num bl">Ordo 1–4</div><div class="stat-lbl id">Tingkatan Akar</div><div class="stat-lbl en">Root Orders</div></div>
+            <div class="stat-box bl"><div class="stat-num bl">80%</div><div class="stat-lbl id">Akar di 0–30 cm</div><div class="stat-lbl en">Roots at 0–30 cm</div></div>
+        </div>
+        <div class="c-body">
+            <span class="id">Sebagian besar akar aktif (tersier &amp; kuartener) terkonsentrasi di lapisan 0–30 cm. Akar pneumatofora membantu aerasi pada lahan gambut. Kerapatan akar berkurang seiring bertambahnya kedalaman.</span>
+            <span class="en">Most active roots (tertiary &amp; quaternary) are concentrated in the 0–30 cm layer. Pneumatophore roots help aeration in peatlands. Root density decreases with depth.</span>
+        </div>
+    </div>
+
+</section>
+</main>
+
+<!-- Flying leaf -->
+<div class="fly-leaf" id="flyLeaf">🌿</div>
+<!-- Toast -->
+<div class="toast" id="toast">
+    <span>🎒</span>
+    <span class="id">Sampel berhasil diambil untuk tahap <strong>Karbonisasi</strong>!</span>
+    <span class="en">Sample successfully taken for <strong>Carbonization</strong> stage!</span>
+</div>
+
+<script>
+    let current     = 'default';
+    let sampleTaken = false;
+
+    // FUNGSI BILINGUAL
+    function toggleLang() {
+        document.body.classList.toggle('lang-en');
+        const isEn = document.body.classList.contains('lang-en');
+        document.getElementById('langIdBtn').classList.toggle('active', !isEn);
+        document.getElementById('langEnBtn').classList.toggle('active', isEn);
+    }
+
+    const zoomMap = {
+        pelepah: 'zoom-pelepah',
+        tandan:  'zoom-tandan',
+        buah:    'zoom-buah',
+        batang:  'zoom-batang',
+        akar:    'zoom-akar',
+        tanah:   'zoom-tanah',
+    };
+
+    function showInfo(part) {
+        if (current === part) { resetView(); return; }
+        current = part;
+
+        document.getElementById('panelDefault').style.display = 'none';
+        document.querySelectorAll('.icard').forEach(c => c.classList.remove('active'));
+
+        // zoom
+        const wrap = document.getElementById('treeWrap');
+        wrap.className = 'tree-wrap ' + (zoomMap[part] || '');
+
+        document.getElementById('overlay').classList.add('on');
+        document.getElementById('btnBack').classList.add('show');
+        document.getElementById('stageHint').style.opacity = '0';
+
+        // show card
+        const id = 'card' + part.charAt(0).toUpperCase() + part.slice(1);
+        const el = document.getElementById(id);
+        if (el) {
+            el.classList.add('active');
+            if (window.innerWidth <= 780) {
+                setTimeout(() => {
+                    document.getElementById('infoPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 150);
+            }
+        }
+
+        // bars
+        if (part === 'pelepah') {
+            requestAnimationFrame(() => setTimeout(() => {
+                document.getElementById('fCel').style.width = '100%';
+                document.getElementById('fHem').style.width = '61%';
+                document.getElementById('fLig').style.width = '44%';
+            }, 100));
+        }
+    }
+
+    function resetView() {
+        current = 'default';
+        document.getElementById('treeWrap').className = 'tree-wrap';
+        document.getElementById('overlay').classList.remove('on');
+        document.getElementById('btnBack').classList.remove('show');
+        document.getElementById('stageHint').style.opacity = '1';
+        ['fCel','fHem','fLig'].forEach(id => document.getElementById(id).style.width = '0');
+        document.getElementById('panelDefault').style.display = 'block';
+        document.querySelectorAll('.icard').forEach(c => c.classList.remove('active'));
+        
+        if (window.innerWidth <= 780) {
+            document.getElementById('treeStage').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }
+
+    function takeSample() {
+        if (sampleTaken) return;
+        sampleTaken = true;
+        const btn   = document.getElementById('btnSample');
+        const toast = document.getElementById('toast');
+        const ok    = document.getElementById('sampleOk');
+        const fly   = document.getElementById('flyLeaf');
+        const panel = document.getElementById('infoPanel').getBoundingClientRect();
+
+        fly.style.cssText = `display:block;left:${panel.left+panel.width*.25}px;top:${panel.top+panel.height*.4}px;opacity:1;transition:none;transform:scale(1) rotate(0deg);`;
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+            fly.style.transition = 'all 1.1s cubic-bezier(.25,.46,.45,.94)';
+            fly.style.left = (window.innerWidth - 60) + 'px';
+            fly.style.top  = '8px';
+            fly.style.fontSize  = '0.5rem';
+            fly.style.opacity   = '0';
+            fly.style.transform = 'scale(.25) rotate(200deg)';
+        }));
+        setTimeout(() => {
+            fly.style.display = 'none';
+            btn.disabled = true;
+            
+            // Bilingual logic untuk tombol setelah diklik
+            btn.innerHTML = '<span class="id">✅ Sampel Telah Diambil</span><span class="en">✅ Sample Taken</span>';
+            
+            ok.classList.add('show');
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3800);
+        }, 1200);
+    }
+</script>
+</body>
+</html>

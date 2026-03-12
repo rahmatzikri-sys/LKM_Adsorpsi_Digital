@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab Prep Scavenger Hunt - Arang Aktif</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #34495e;
+            --accent: #3498db;
+            --success: #27ae60;
+            --warning: #f1c40f;
+            --danger: #e74c3c;
+            --lab-wall: #e0e6e9;
+            --lab-floor: #bdc3c7;
+            --text: #2c3e50;
+            --wood: #8d6e63;
+            --wood-dark: #5d4037;
+            
+            /* Variabel Ukuran Gambar (Diatur via JS) */
+            --img-asisten-size: 250px;
+            --img-item-size: 60px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--lab-wall);
+            color: var(--text);
+            overflow: hidden; 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        .game-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* --- BILINGUAL TOGGLE BUTTONS --- */
+        .lang-switch {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            display: flex;
+            gap: 10px;
+        }
+        .lang-btn {
+            padding: 8px 16px;
+            font-weight: bold;
+            border-radius: 20px; 
+            border: 2px solid var(--primary);
+            cursor: pointer; 
+            background: rgba(255,255,255,0.8);
+            color: var(--primary); 
+            transition: 0.3s;
+            font-size: 0.9rem;
+        }
+        .lang-btn.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        /* --- BACKGROUND UTAMA --- */
+        .lab-bg {
+            position: absolute;
+            inset: 0;
+            z-index: 0;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-color: var(--lab-wall);
+        }
+
+        /* Container untuk elemen dekorasi CSS */
+        #css-lab-scene {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .css-shelf {
+            position: absolute; top: 10%; left: 0; width: 100%; height: 15px;
+            background: #7f8c8d; border-bottom: 4px solid #34495e;
+            box-shadow: 0 10px 15px rgba(0,0,0,0.1);
+        }
+        .css-shelf::after {
+            content: '🧪 ⚗️ 🧪 🧴 🧪 ⚗️ 🧴 🧪 ⚗️';
+            position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%);
+            font-size: 25px; letter-spacing: 30px; opacity: 0.7; white-space: nowrap;
+        }
+        .css-floor {
+            position: absolute; bottom: 0; width: 100%; height: 25%;
+            background: linear-gradient(to bottom, #bdc3c7, #95a5a6); border-top: 8px solid #7f8c8d;
+        }
+        .css-bench {
+            position: absolute; bottom: 0; width: 100%; height: 120px;
+            background: #ffffff; border-top: 10px solid var(--secondary);
+            box-shadow: 0 -5px 20px rgba(0,0,0,0.1); z-index: 1;
+        }
+
+        /* --- SCREENS --- */
+        .screen {
+            display: none; width: 100%; height: 100%;
+            position: relative; z-index: 2; padding: 20px;
+        }
+        .screen.active { display: flex; flex-direction: column; }
+
+        /* --- ASISTEN LAYOUT --- */
+        .asisten-section {
+            flex: 1; display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            position: relative; margin-bottom: 60px;
+        }
+
+        .speech-bubble-container {
+            width: 90%; max-width: 800px; margin-bottom: 10px;
+            position: relative; z-index: 10;
+        }
+
+        .speech-bubble {
+            background: white; border: 6px solid var(--accent); border-radius: 30px;
+            padding: 25px 35px; font-size: 1.4rem; line-height: 1.5;
+            box-shadow: 0 15px 30px rgba(0,0,0,0.2); position: relative;
+            min-height: 110px; z-index: 1;
+        }
+        .speech-bubble::after {
+            content: ''; position: absolute; bottom: -30px; left: 50%;
+            transform: translateX(-50%); border-width: 30px 20px 0;
+            border-style: solid; border-color: var(--accent) transparent;
+        }
+
+        .asisten-name {
+            position: absolute; top: -15px; left: 30px;
+            background: var(--primary); color: white; padding: 5px 25px;
+            border-radius: 20px; font-weight: bold; font-size: 1.1rem;
+            letter-spacing: 1px; z-index: 20; box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .asisten-sprite {
+            margin-top: 10px; z-index: 5; display: flex;
+            justify-content: center; align-items: center;
+            filter: drop-shadow(0 15px 25px rgba(0,0,0,0.3));
+            animation: float 4s ease-in-out infinite;
+        }
+        
+        /* Ukuran Asisten Menggunakan Variabel */
+        .asisten-img {
+            width: var(--img-asisten-size); 
+            height: auto; display: block;
+        }
+        .asisten-emoji {
+            font-size: var(--img-asisten-size); 
+            line-height: 1; cursor: default; user-select: none;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        /* --- UI ELEMENTS --- */
+        .btn-container {
+            position: absolute; bottom: 140px; left: 50%;
+            transform: translateX(-50%); z-index: 100;
+        }
+        .btn {
+            padding: 15px 45px; font-size: 1.2rem; font-weight: bold; border: none;
+            border-radius: 50px; cursor: pointer; transition: 0.2s;
+            text-transform: uppercase; box-shadow: 0 5px 0 rgba(0,0,0,0.2);
+        }
+        .btn-primary { background: var(--accent); color: white; }
+        .btn-success { background: var(--success); color: white; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
+
+        /* --- SELECTION LAYOUT --- */
+        #screen-selection {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(5px);
+            margin: 20px; height: calc(100% - 40px);
+            border-radius: 20px; border: 1px solid white;
+            overflow: hidden;
+        }
+
+        .selection-grid {
+            display: grid; grid-template-columns: 1fr 1fr;
+            gap: 20px; height: 80%; padding: 20px;
+        }
+
+        .area {
+            display: flex; flex-direction: column;
+            border-radius: 15px; overflow: hidden;
+            border: 4px solid #bdc3c7;
+            position: relative;
+            background-size: cover;
+            background-position: center;
+        }
+
+        .shelf-bg { background-color: var(--wood); box-shadow: inset 0 0 40px rgba(0,0,0,0.4); border-color: var(--wood-dark); }
+        .table-bg { background-color: #f8f9fa; }
+
+        .area-title {
+            background: var(--secondary); color: white; padding: 10px;
+            text-align: center; font-weight: bold; font-size: 0.9rem; z-index: 2;
+        }
+
+        .items-container {
+            flex: 1; padding: 15px; display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 15px; overflow-y: auto; align-content: start;
+            z-index: 2;
+            background: rgba(255,255,255,0.3);
+        }
+
+        .item {
+            background: white; border-radius: 10px; padding: 10px 5px;
+            text-align: center; cursor: pointer; transition: 0.2s;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1); border: 2px solid transparent;
+            display: flex; flex-direction: column; align-items: center;
+        }
+        .item:hover { transform: scale(1.1); border-color: var(--accent); }
+        
+        /* Ukuran Alat Menggunakan Variabel */
+        .item-visual img { 
+            width: var(--img-item-size); 
+            height: var(--img-item-size); 
+            object-fit: contain; display: block; 
+        }
+        .item-visual .emoji { 
+            font-size: calc(var(--img-item-size) * 0.75); 
+            line-height: var(--img-item-size); 
+        }
+        .item-name { font-size: 0.7rem; font-weight: bold; margin-top: 5px; color: var(--primary); }
+
+        .modal {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,0.85); z-index: 1000;
+            align-items: center; justify-content: center;
+        }
+        .modal-content {
+            background: white; padding: 40px; border-radius: 30px;
+            max-width: 450px; text-align: center;
+        }
+        #modalIcon img { width: 150px; height: auto; }
+        #modalIcon .emoji { font-size: 100px; }
+    </style>
+</head>
+<body>
+
+    <!-- TOMBOL GANTI BAHASA -->
+    <div class="lang-switch">
+        <button class="lang-btn active" id="btn-lang-id" onclick="setLanguage('id')">IN</button>
+        <button class="lang-btn" id="btn-lang-en" onclick="setLanguage('en')">EN</button>
+    </div>
+
+    <div class="game-container">
+        <!-- BACKGROUND UTAMA -->
+        <div class="lab-bg" id="main-bg"></div>
+        
+        <!-- DEKORASI CSS (Akan hilang jika Anda pakai foto background sendiri) -->
+        <div id="css-lab-scene">
+            <div class="css-shelf"></div>
+            <div class="css-floor"></div>
+            <div class="css-bench"></div>
+        </div>
+
+        <!-- INTRO SCREEN -->
+        <div id="screen-intro" class="screen active">
+            <div class="asisten-section">
+                <div class="speech-bubble-container">
+                    <div class="asisten-name" id="asisten-title-1">Asisten</div>
+                    <div class="speech-bubble">
+                        <span id="intro-text"></span>
+                    </div>
+                </div>
+                
+                <div class="asisten-sprite">
+                    <!-- FOTO ASISTEN NORMAL -->
+                    <img id="asisten-img-normal" class="asisten-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
+                    <div class="asisten-emoji" style="display:none">👨‍🔬</div>
+                </div>
+
+            </div>
+            <div class="btn-container">
+                <button id="btn-start" class="btn btn-primary" style="display:none;" onclick="changeScreen('screen-selection')">Saya Siap!</button>
+            </div>
+        </div>
+
+        <!-- SELECTION SCREEN -->
+        <div id="screen-selection" class="screen">
+            <div class="selection-grid">
+                <!-- AREA LEMARI -->
+                <div class="area shelf-bg" id="shelf-area">
+                    <div class="area-title" id="shelf-title">📦 LEMARI LOGISTIK</div>
+                    <div class="items-container" id="shelf"></div>
+                </div>
+                <!-- AREA MEJA -->
+                <div class="area table-bg" id="table-area">
+                    <div class="area-title" id="table-title">🔬 MEJA PREPARASI</div>
+                    <div class="items-container" id="workspace"></div>
+                </div>
+            </div>
+            <div style="text-align: center; padding-bottom: 20px;">
+                <button class="btn btn-primary" id="btn-verify" onclick="validateSelection()">VERIFIKASI PERALATAN</button>
+            </div>
+        </div>
+
+        <!-- FEEDBACK SCREEN -->
+        <div id="screen-feedback" class="screen">
+            <div class="asisten-section">
+                <div class="speech-bubble-container">
+                    <div class="asisten-name" id="asisten-title-2">Asisten</div>
+                    <div class="speech-bubble">
+                        <span id="feedback-text"></span>
+                    </div>
+                </div>
+                
+                <div class="asisten-sprite">
+                    <!-- FOTO ASISTEN RESPON (Dinamis: Benar/Salah) -->
+                    <img id="asisten-img-feedback" class="asisten-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
+                    <div id="asisten-emoji-feedback" class="asisten-emoji" style="display:none">😐</div>
+                </div>
+
+            </div>
+            <div class="btn-container" id="feedback-controls"></div>
+        </div>
+    </div>
+
+    <!-- MODAL DETAIL -->
+    <div id="infoModal" class="modal">
+        <div class="modal-content">
+            <div id="modalIcon"></div>
+            <h2 id="modalTitle" style="margin:20px 0; color: var(--primary);"></h2>
+            <p id="modalDesc" style="margin-bottom:30px; color:#555; line-height: 1.6;"></p>
+            <button class="btn btn-primary" id="btn-close-modal" onclick="closeModal()">Tutup</button>
+        </div>
+    </div>
+
+    <script>
+        // =========================================================================
+        //  AREA KONFIGURASI GAMBAR - UBAH BAGIAN INI SESUAI FILE ANDA
+        // =========================================================================
+        
+        // 1. NAMA ASISTEN
+        const CONFIG_NAMA_ASISTEN = "Pak Zikri"; 
+
+        // 2. GAMBAR ASISTEN (Simpan foto di folder yang sama dengan file ini)
+        const IMG_ASISTEN_NORMAL = "asisten.png";  // Tampil saat intro
+        const IMG_ASISTEN_BENAR  = "senyum.png";  // Tampil jika jawaban benar
+        const IMG_ASISTEN_SALAH  = "marah.png";   // Tampil jika jawaban salah
+
+        // 3. UKURAN GAMBAR (Dalam Pixel / px)
+        // Ganti angka di bawah ini untuk membesarkan/mengecilkan gambar
+        const CONFIG_UKURAN_FOTO_ASISTEN = 250; // Lebar foto asisten (Default: 250)
+        const CONFIG_UKURAN_FOTO_ALAT    = 60;  // Lebar foto alat di rak/meja (Default: 60)
+
+        // 4. GAMBAR BACKGROUND (Kosongkan "" jika ingin pakai warna standar)
+        const IMG_BG_LAB    = "lab.png"; // Contoh: "lab_background.jpg"
+        const IMG_BG_LEMARI = "lemari.png"; // Contoh: "rak_kayu.jpg"
+        const IMG_BG_MEJA   = "meja.png"; // Contoh: "meja_granit.jpg"
+
+        // =========================================================================
+
+        const LAB_ITEMS = [
+            // --- ALAT (Ganti nama file gambar di properti 'image') ---
+            { id: 'erlenmeyer', name: 'Erlenmeyer', name_en: 'Erlenmeyer Flask', image: 'erlenmeyer.png', emoji: '🧪', correct: true, desc: 'Wadah mencampur larutan.', desc_en: 'Container for mixing solutions.' },
+            { id: 'labu_takar', name: 'Labu Takar', name_en: 'Volumetric Flask', image: 'labu_takar.png', emoji: '⚗️', correct: true, desc: 'Membuat larutan volume akurat.', desc_en: 'For making accurate volume solutions.' },
+            { id: 'buret', name: 'Buret', name_en: 'Burette', image: 'buret.png', emoji: '📏', correct: true, desc: 'Titrasi presisi.', desc_en: 'For precision titration.' },
+            { id: 'kaca_arloji', name: 'Kaca Arloji', name_en: 'Watch Glass', image: 'kaca_arloji.png', emoji: '🍽️', correct: true, desc: 'Wadah menimbang padatan.', desc_en: 'Container for weighing solids.' },
+            { id: 'kertas_saring', name: 'Kertas Saring', name_en: 'Filter Paper', image: 'kertas_saring.png', emoji: '📄', correct: true, desc: 'Menyaring endapan.', desc_en: 'Used for filtering precipitates.' },
+            { id: 'pipet_ukur', name: 'Pipet Ukur', name_en: 'Measuring Pipette', image: 'pipet_ukur.png', emoji: '💉', correct: true, desc: 'Memindahkan cairan.', desc_en: 'For transferring liquids.' },
+            { id: 'furnace', name: 'Furnace', name_en: 'Furnace', image: 'furnace.png', emoji: '🔥', correct: true, desc: 'Pemanas suhu tinggi.', desc_en: 'High-temperature heater.' },
+            { id: 'oven', name: 'Oven', name_en: 'Oven', image: 'oven.png', emoji: '📦', correct: true, desc: 'Pengering sampel.', desc_en: 'Sample dryer.' },
+            { id: 'ayakan', name: 'Ayakan', name_en: 'Sieve', image: 'ayakan.png', emoji: '🏁', correct: true, desc: 'Menyeragamkan ukuran partikel.', desc_en: 'Standardizes particle size.' },
+            { id: 'krusibel', name: 'Krusibel', name_en: 'Crucible', image: 'krusibel.png', emoji: '🥣', correct: true, desc: 'Wadah sampel furnace.', desc_en: 'Sample container for furnace.' },
+            { id: 'stopwatch', name: 'Stopwatch', name_en: 'Stopwatch', image: 'stopwatch.png', emoji: '⏱️', correct: true, desc: 'Pengukur waktu.', desc_en: 'Time measuring device.' },
+            { id: 'sentrifuge', name: 'Sentrifuge', name_en: 'Centrifuge', image: 'sentrifuge.png', emoji: '🌀', correct: true, desc: 'Pemisah endapan.', desc_en: 'Precipitate separator.' },
+            { id: 'corong', name: 'Corong Kaca', name_en: 'Glass Funnel', image: 'corong.png', emoji: '▽', correct: true, desc: 'Bantu tuang & saring.', desc_en: 'Aids in pouring and filtering.' },
+            { id: 'neraca', name: 'Neraca Analitik', name_en: 'Analytical Balance', image: 'neraca.png', emoji: '⚖️', correct: true, desc: 'Timbangan teliti.', desc_en: 'Precision balance.' },
+            
+            // --- BAHAN ---
+            { id: 'pelepah', name: 'Pelepah Sawit', name_en: 'Palm Frond', image: 'pelepah.png', emoji: '🌴', correct: true, desc: 'Bahan baku biomassa.', desc_en: 'Biomass raw material.' },
+            { id: 'akua', name: 'Akua DM', name_en: 'Demineralized Water', image: 'akua.png', emoji: '💧', correct: true, desc: 'Air bebas mineral.', desc_en: 'Mineral-free water.' },
+            { id: 'naoh', name: 'NaOH', name_en: 'NaOH', image: 'naoh.png', emoji: '🧪', correct: true, desc: 'Aktivator basa.', desc_en: 'Base activator.' },
+            { id: 'pp', name: 'Indikator PP', name_en: 'PP Indicator', image: 'pp.png', emoji: '💧', correct: true, desc: 'Cek pH sisa.', desc_en: 'Check residual pH.' },
+
+            // --- PENGECOH ---
+            { id: 'koh', name: 'KOH', name_en: 'KOH', image: 'koh.png', emoji: '🧪', correct: false, desc: 'Salah (Pengecoh).', desc_en: 'Wrong (Decoy).' },
+            { id: 'batang_sawit', name: 'Batang Sawit', name_en: 'Palm Trunk', image: 'batang.png', emoji: '🪵', correct: false, desc: 'Salah (Pengecoh).', desc_en: 'Wrong (Decoy).' },
+            { id: 'sem', name: 'SEM', name_en: 'SEM', image: 'sem.png', emoji: '🔬', correct: false, desc: 'Salah (Pengecoh).', desc_en: 'Wrong (Decoy).' },
+            { id: 'xrd', name: 'XRD', name_en: 'XRD', image: 'xrd.png', emoji: '📊', correct: false, desc: 'Salah (Pengecoh).', desc_en: 'Wrong (Decoy).' },
+            { id: 'uv_vis', name: 'UV Vis', name_en: 'UV Vis', image: 'uvvis.png', emoji: '🌈', correct: false, desc: 'Salah (Pengecoh).', desc_en: 'Wrong (Decoy).' },
+            { id: 'mo', name: 'Metil Orange', name_en: 'Methyl Orange', image: 'mo.png', emoji: '🟠', correct: false, desc: 'Salah (Pengecoh).', desc_en: 'Wrong (Decoy).' },
+            { id: 'hcl', name: 'HCl', name_en: 'HCl', image: 'hcl.png', emoji: '⚠️', correct: false, desc: 'Salah (Pengecoh).', desc_en: 'Wrong (Decoy).' },
+            { id: 'kaki_tiga', name: 'Kaki Tiga', name_en: 'Tripod', image: 'kakitiga.png', emoji: '🔥', correct: false, desc: 'Salah (Pengecoh).', desc_en: 'Wrong (Decoy).' },
+            { id: 'tabung_reaksi', name: 'Tabung Reaksi', name_en: 'Test Tube', image: 'tabung.png', emoji: '🧪', correct: false, desc: 'Salah (Pengecoh).', desc_en: 'Wrong (Decoy).' },
+            { id: 'termometer', name: 'Termometer', name_en: 'Thermometer', image: 'termometer.png', emoji: '🌡️', correct: false, desc: 'Salah (Pengecoh).', desc_en: 'Wrong (Decoy).' }
+        ];
+
+        // =========================================================================
+        //  DICTIONARY TERJEMAHAN BILINGUAL (ID & EN)
+        // =========================================================================
+
+        let currentLang = 'id';
+        let currentModalItem = null;
+
+        const TRANSLATIONS = {
+            id: {
+                asistenTitle: "Asisten",
+                introMsg: `Halo! Saya ${CONFIG_NAMA_ASISTEN}. Kita akan membuat Arang. Tolong pindahkan alat dan bahan yang benar dari Lemari ke Meja Preparasi.`,
+                btnStart: "SAYA SIAP!",
+                shelfTitle: "📦 LEMARI LOGISTIK",
+                tableTitle: "🔬 MEJA PREPARASI",
+                btnVerify: "VERIFIKASI PERALATAN",
+                feedbackSuccess: "Luar biasa! Semua persiapan lengkap dan benar. Silakan pelajari alat-alatnya sekarang.",
+                btnStudy: "PELAJARI ALAT",
+                feedbackWrong: (itemName) => `Ada benda yang salah di meja (${itemName}). Coba cek lagi!`,
+                feedbackMissing: "Masih ada alat atau bahan yang tertinggal di lemari.",
+                btnReset: "ATUR ULANG",
+                btnClose: "Tutup"
+            },
+            en: {
+                asistenTitle: "Assistant",
+                introMsg: `Hello! I am ${CONFIG_NAMA_ASISTEN}. We are going to make Charcoal. Please move the correct equipment and materials from the Cabinet to the Preparation Table.`,
+                btnStart: "I'M READY!",
+                shelfTitle: "📦 LOGISTICS CABINET",
+                tableTitle: "🔬 PREPARATION TABLE",
+                btnVerify: "VERIFY EQUIPMENT",
+                feedbackSuccess: "Excellent! All preparations are complete and correct. You can study the equipment now.",
+                btnStudy: "STUDY EQUIPMENT",
+                feedbackWrong: (itemName) => `There is a wrong item on the table (${itemName}). Please check again!`,
+                feedbackMissing: "There are still necessary equipment or materials left in the cabinet.",
+                btnReset: "RESET",
+                btnClose: "Close"
+            }
+        };
+
+        let workspaceItems = [];
+        let isGameCleared = false;
+        let typingInterval;
+
+        function setLanguage(lang) {
+            currentLang = lang;
+            
+            // Ubah tampilan tombol aktif
+            document.getElementById('btn-lang-id').classList.toggle('active', lang === 'id');
+            document.getElementById('btn-lang-en').classList.toggle('active', lang === 'en');
+
+            // Terjemahkan teks statis di HTML
+            document.getElementById('asisten-title-1').innerText = TRANSLATIONS[lang].asistenTitle;
+            document.getElementById('asisten-title-2').innerText = TRANSLATIONS[lang].asistenTitle;
+            document.getElementById('btn-start').innerText = TRANSLATIONS[lang].btnStart;
+            document.getElementById('shelf-title').innerText = TRANSLATIONS[lang].shelfTitle;
+            document.getElementById('table-title').innerText = TRANSLATIONS[lang].tableTitle;
+            document.getElementById('btn-verify').innerText = TRANSLATIONS[lang].btnVerify;
+            document.getElementById('btn-close-modal').innerText = TRANSLATIONS[lang].btnClose;
+
+            // Render ulang alat agar namanya berubah sesuai bahasa
+            renderShelf();
+            renderWorkspace();
+
+            // Cek jika sedang di layar Intro atau Feedback, maka ulangi teks agar berubah
+            if (document.getElementById('screen-intro').classList.contains('active')) {
+                typeWriter(TRANSLATIONS[lang].introMsg, 'intro-text', () => {
+                    document.getElementById('btn-start').style.display = 'inline-block';
+                });
+            } else if (document.getElementById('screen-feedback').classList.contains('active')) {
+                validateSelection(true); // Memanggil validasi ulang teks tanpa mengubah layar
+            }
+
+            // Jika modal sedang terbuka, perbarui isinya
+            if (document.getElementById('infoModal').style.display === 'flex' && currentModalItem) {
+                showItemInfo(currentModalItem);
+            }
+        }
+
+        function typeWriter(text, elementId, callback) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = '';
+            let i = 0;
+            clearInterval(typingInterval);
+            typingInterval = setInterval(() => {
+                if (i < text.length) {
+                    element.innerHTML += text.charAt(i);
+                    i++;
+                } else {
+                    clearInterval(typingInterval);
+                    if (callback) callback();
+                }
+            }, 30);
+        }
+
+        function init() {
+            // Update CSS variables from Config
+            document.documentElement.style.setProperty('--img-asisten-size', CONFIG_UKURAN_FOTO_ASISTEN + 'px');
+            document.documentElement.style.setProperty('--img-item-size', CONFIG_UKURAN_FOTO_ALAT + 'px');
+
+            // Setup Gambar Asisten Intro
+            document.getElementById('asisten-img-normal').src = IMG_ASISTEN_NORMAL;
+
+            // Setup Backgrounds
+            setupBackgrounds();
+
+            // Mulai game dengan bahasa Indonesia
+            setLanguage('id');
+        }
+
+        function setupBackgrounds() {
+            // Background Lab Utama
+            if (IMG_BG_LAB && IMG_BG_LAB.trim() !== "") {
+                const bg = document.getElementById('main-bg');
+                bg.style.backgroundImage = `url('${IMG_BG_LAB}')`;
+                // Sembunyikan dekorasi CSS jika ada gambar
+                document.getElementById('css-lab-scene').style.display = 'none';
+            }
+
+            // Background Lemari
+            if (IMG_BG_LEMARI && IMG_BG_LEMARI.trim() !== "") {
+                document.getElementById('shelf-area').style.backgroundImage = `url('${IMG_BG_LEMARI}')`;
+                document.getElementById('shelf-area').style.backgroundColor = 'transparent';
+                document.getElementById('shelf-area').style.boxShadow = 'none';
+            }
+
+            // Background Meja
+            if (IMG_BG_MEJA && IMG_BG_MEJA.trim() !== "") {
+                document.getElementById('table-area').style.backgroundImage = `url('${IMG_BG_MEJA}')`;
+                document.getElementById('table-area').style.backgroundColor = 'transparent';
+            }
+        }
+
+        function changeScreen(id) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+        }
+
+        function renderShelf() {
+            const el = document.getElementById('shelf');
+            el.innerHTML = '';
+            const shuffledItems = [...LAB_ITEMS].sort(() => Math.random() - 0.5);
+            shuffledItems.forEach(item => {
+                if (!workspaceItems.find(i => i.id === item.id)) el.appendChild(createItemEl(item));
+            });
+        }
+
+        function renderWorkspace() {
+            const el = document.getElementById('workspace');
+            el.innerHTML = '';
+            workspaceItems.forEach(item => el.appendChild(createItemEl(item)));
+        }
+
+        function createItemEl(item) {
+            const div = document.createElement('div');
+            div.className = 'item';
+            
+            // Ambil nama sesuai bahasa aktif
+            const itemName = currentLang === 'en' ? item.name_en : item.name;
+
+            div.innerHTML = `
+                <div class="item-visual">
+                    <img src="${item.image}" alt="${itemName}" onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
+                    <div class="emoji" style="display:none;">${item.emoji}</div>
+                </div>
+                <div class="item-name">${itemName}</div>
+            `;
+            div.onclick = () => isGameCleared ? showItemInfo(item) : handleMove(item);
+            return div;
+        }
+
+        function handleMove(item) {
+            const idx = workspaceItems.findIndex(i => i.id === item.id);
+            if (idx > -1) workspaceItems.splice(idx, 1);
+            else workspaceItems.push(item);
+            renderShelf(); renderWorkspace();
+        }
+
+        function validateSelection(isLanguageSwitch = false) {
+            const correctTotal = LAB_ITEMS.filter(i => i.correct).length;
+            const wrongPicked = workspaceItems.filter(i => !i.correct);
+            const correctPicked = workspaceItems.filter(i => i.correct);
+
+            // Hanya pindah screen jika ini validasi murni (bukan karena tombol bahasa ditekan)
+            if (!isLanguageSwitch) changeScreen('screen-feedback');
+
+            const feedbackImg = document.getElementById('asisten-img-feedback');
+            const feedbackEmoji = document.getElementById('asisten-emoji-feedback');
+            const ctrl = document.getElementById('feedback-controls');
+            ctrl.innerHTML = '';
+
+            // Reset display state
+            feedbackImg.style.display = 'block';
+            feedbackEmoji.style.display = 'none';
+
+            if (correctPicked.length === correctTotal && wrongPicked.length === 0) {
+                isGameCleared = true;
+                feedbackImg.src = IMG_ASISTEN_BENAR; // Load gambar asisten senang
+                feedbackEmoji.innerHTML = "😎"; // Fallback emoji
+
+                typeWriter(TRANSLATIONS[currentLang].feedbackSuccess, "feedback-text", () => {
+                    ctrl.innerHTML = `<button class="btn btn-success" onclick="changeScreen('screen-selection')">${TRANSLATIONS[currentLang].btnStudy}</button>`;
+                });
+            } else {
+                feedbackImg.src = IMG_ASISTEN_SALAH; // Load gambar asisten sedih
+                feedbackEmoji.innerHTML = "😟"; // Fallback emoji
+
+                let msg = "";
+                if (wrongPicked.length > 0) {
+                    // Ambil nama item sesuai bahasa
+                    const wrongItemName = currentLang === 'en' ? wrongPicked[0].name_en : wrongPicked[0].name;
+                    msg = TRANSLATIONS[currentLang].feedbackWrong(wrongItemName);
+                } else {
+                    msg = TRANSLATIONS[currentLang].feedbackMissing;
+                }
+                
+                typeWriter(msg, "feedback-text", () => {
+                    ctrl.innerHTML = `<button class="btn btn-danger" onclick="changeScreen('screen-selection')">${TRANSLATIONS[currentLang].btnReset}</button>`;
+                });
+            }
+        }
+
+        function showItemInfo(item) {
+            currentModalItem = item;
+            const itemName = currentLang === 'en' ? item.name_en : item.name;
+            const itemDesc = currentLang === 'en' ? item.desc_en : item.desc;
+
+            document.getElementById('modalTitle').innerText = itemName;
+            document.getElementById('modalDesc').innerText = itemDesc;
+            document.getElementById('modalIcon').innerHTML = `
+                <img src="${item.image}" onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
+                <div class="emoji" style="display:none;">${item.emoji}</div>
+            `;
+            document.getElementById('infoModal').style.display = 'flex';
+        }
+
+        function closeModal() { 
+            document.getElementById('infoModal').style.display = 'none'; 
+            currentModalItem = null;
+        }
+        
+        window.onload = init;
+    </script>
+</body>
+</html>

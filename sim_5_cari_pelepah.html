@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulasi Tahap 1: Studi Lapangan Biomassa (Arang)</title>
+    <style>
+        /* ==========================================================================
+           BAGIAN 1: KONFIGURASI GAMBAR & TAMPILAN (GANTI DI SINI)
+           ========================================================================== */
+        :root {
+            /* --- A. GAMBAR BACKGROUND & OBJEK --- */
+            /* Ganti url('...') dengan nama file gambar Anda */
+            --bg-peta-url: url('peta.png');
+            --bg-kebun-url: url('kebun.png'); 
+            --img-pohon-url: url('pohon-sawit.png');
+
+            /* --- B. GAMBAR HASIL PANEN --- */
+            --img-pelepah-segar: url('pelepah-segar.png');
+            --img-pelepah-layu: url('pelepah-layu.png');
+            --img-karung: url('karung.png');
+
+            /* --- C. POSISI AREA KLIK DI POHON (Sesuaikan Angka %) --- */
+            /* Area Atas (Segar) */
+            --posisi-segar-top: 10%;       /* Jarak dari atas */
+            --tinggi-area-segar: 150px;    /* Tinggi area klik */
+
+            /* Area Bawah (Layu) */
+            --posisi-layu-bottom: 10%;     /* Jarak dari bawah */
+            --tinggi-area-layu: 150px;     /* Tinggi area klik */
+
+            /* --- D. LABEL NAMA DI PETA --- */
+            --nama-pin-a: "Kebun Sawit";   /* Jawaban Benar */
+            --nama-pin-b: "Kebun Kelapa";
+            --nama-pin-c: "Kebun Durian";
+            --nama-pin-d: "Kebun Jagung";
+            --nama-pin-e: "Kebun Karet";
+
+            /* --- UKURAN UMUM (Jarang perlu diubah) --- */
+            --container-max-width: 1024px;
+            --map-aspect-ratio: 1/1;
+        }
+
+        /* ==========================================================================
+           CSS ENGINE (JANGAN UBAH BAGIAN INI KECUALI PAHAM CSS)
+           ========================================================================== */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+            display: flex; justify-content: center; align-items: center;
+            min-height: 100vh; color: #333;
+        }
+        #app-container {
+            width: 100%; max-width: var(--container-max-width);
+            background: white; box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            border-radius: 12px; overflow: hidden; position: relative;
+        }
+        .top-bar {
+            background: #2d3436; color: white; padding: 15px 20px;
+            text-align: center; position: relative; z-index: 100;
+        }
+        .top-bar h1 { font-size: 1.2rem; margin-bottom: 5px; }
+        .top-bar p { font-size: 0.9rem; opacity: 0.8; color: #fab1a0; }
+
+        /* BILINGUAL SWITCHER */
+        .lang-switcher {
+            position: absolute; top: 15px; right: 20px; display: flex; gap: 5px;
+        }
+        .lang-btn {
+            background: rgba(255, 255, 255, 0.2); color: white; border: 1px solid rgba(255, 255, 255, 0.5); 
+            padding: 4px 8px; font-size: 0.8rem; cursor: pointer; border-radius: 4px; transition: all 0.2s;
+        }
+        .lang-btn.active { background: #fab1a0; color: #2d3436; border-color: #fab1a0; font-weight: bold; }
+
+        /* SCENE 1 */
+        #scene-1 { display: block; padding: 20px; }
+        #map-wrapper {
+            position: relative; width: 100%; aspect-ratio: var(--map-aspect-ratio); 
+            background-image: var(--bg-peta-url); background-size: cover; background-position: center;
+            background-color: #ddd; border-radius: 8px; border: 2px solid #ddd; overflow: hidden;
+        }
+        .map-pin {
+            position: absolute; width: 40px; height: 40px; background: white;
+            border: 3px solid #e74c3c; border-radius: 50%; cursor: pointer;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 1.2rem; box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            transition: transform 0.2s; z-index: 10;
+        }
+        .map-pin:hover { transform: scale(1.1); background: #e74c3c; border-color: white; z-index: 20; }
+        .map-pin::after {
+            position: absolute; top: 45px; left: 50%; transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.9); color: #333; padding: 4px 8px;
+            border: 1px solid #ccc; border-radius: 4px; font-size: 0.75rem; font-weight: bold;
+            white-space: nowrap; pointer-events: none; box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        #pin-a::after { content: var(--nama-pin-a); border-bottom: 3px solid #27ae60; }
+        #pin-b::after { content: var(--nama-pin-b); }
+        #pin-c::after { content: var(--nama-pin-c); }
+        #pin-d::after { content: var(--nama-pin-d); }
+        #pin-e::after { content: var(--nama-pin-e); }
+        #pin-a { top: 54%; left: 70%; border-color: #27ae60; }
+        #pin-b { top: 35%; left: 20%; }
+        #pin-c { top: 58%; left: 25%; }
+        #pin-d { top: 75%; left: 45%; }
+        #pin-e { top: 39%; left: 62%; }
+
+        /* SCENE 2 */
+        #scene-2 {
+            display: none; position: relative; min-height: 600px; 
+            background-image: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), var(--bg-kebun-url);
+            background-size: cover; background-position: center; overflow: hidden;
+        }
+        .scene-header {
+            position: absolute; top: 20px; left: 0; right: 0;
+            text-align: center; color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+            z-index: 50; pointer-events: none;
+        }
+        .tree-container {
+            position: absolute; bottom: -50px; left: 50%; transform: translateX(-50%);
+            width: 400px; height: 80%; z-index: 5; transition: transform 0.1s;
+        }
+        .tree-img {
+            width: 100%; height: 100%; background-image: var(--img-pohon-url);
+            background-size: contain; background-repeat: no-repeat; background-position: bottom center;
+            filter: drop-shadow(0 10px 15px rgba(0,0,0,0.5));
+        }
+        .hotspot {
+            position: absolute; left: 50%; transform: translateX(-50%);
+            width: 250px; border: 2px dashed rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.1); border-radius: 10px; cursor: pointer;
+            transition: all 0.3s; display: flex; justify-content: center; align-items: center;
+            color: white; font-weight: bold; text-shadow: 0 2px 4px black;
+        }
+        .hotspot:hover { background: rgba(255, 255, 0, 0.2); border-color: yellow; }
+        #area-segar { top: var(--posisi-segar-top); height: var(--tinggi-area-segar); }
+        #area-layu { bottom: var(--posisi-layu-bottom); height: var(--tinggi-area-layu); }
+        .hotspot span { opacity: 0; transition: opacity 0.3s; background: rgba(0,0,0,0.7); padding: 5px 10px; border-radius: 4px; }
+        .hotspot:hover span { opacity: 1; }
+
+        /* ANIMASI */
+        #parang {
+            position: absolute; font-size: 80px; pointer-events: none; opacity: 0; z-index: 100;
+            transform-origin: bottom left; transition: opacity 0.1s;
+        }
+        .animate-chop { animation: chopAction 0.3s ease-in-out 2; }
+        @keyframes chopAction {
+            0%, 100% { transform: rotate(0deg) translate(0, 0) scale(1); }
+            50% { transform: rotate(-45deg) translate(-20px, -20px) scale(1.1); }
+        }
+        .shaking { animation: shakeTree 0.4s ease-in-out; }
+        @keyframes shakeTree {
+            0%, 100% { transform: translateX(-50%) rotate(0deg); }
+            25%, 75% { transform: translateX(-51%) rotate(-2deg); }
+            50% { transform: translateX(-49%) rotate(2deg); }
+        }
+
+        /* SCENE 2B & KARUNG */
+        #harvest-view {
+            display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 80; flex-direction: column; align-items: center; justify-content: center;
+        }
+        #pelepah-result-container {
+            width: 300px; height: 300px; position: relative; margin-bottom: 20px; 
+            transition: all 0.8s ease-in-out; 
+        }
+        #pelepah-result-visual {
+            width: 100%; height: 100%; background-size: contain; background-repeat: no-repeat;
+            background-position: center; filter: drop-shadow(0 5px 15px rgba(0,0,0,0.3));
+        }
+        .show-segar { background-image: var(--img-pelepah-segar); }
+        .show-layu { background-image: var(--img-pelepah-layu); }
+        #btn-lab {
+            padding: 15px 30px; font-size: 1.1rem; background-color: #27ae60; color: white;
+            border: none; border-radius: 50px; cursor: pointer; box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            transition: transform 0.2s, background 0.2s; pointer-events: auto;
+            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        #btn-lab:hover { background-color: #2ecc71; transform: scale(1.05); }
+        
+        #karung-container {
+            position: absolute; bottom: -300px; left: 50%; transform: translateX(-50%);
+            width: 200px; height: 250px; transition: bottom 0.5s ease-out; z-index: 70;
+        }
+        #karung-visual {
+            width: 100%; height: 100%; background-image: var(--img-karung);
+            background-size: contain; background-repeat: no-repeat; background-position: center;
+        }
+        /* Animasi Masuk Karung */
+        .pelepah-masuk-karung { transform: translate(0, 200px) scale(0.1) !important; opacity: 0; }
+        .karung-muncul { bottom: 50px !important; }
+        .karung-goyang { animation: shakeTree 0.3s ease-in-out; }
+        @keyframes popIn { 0% { transform: scale(0); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+
+        /* MODAL */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7);
+            display: flex; justify-content: center; align-items: center; z-index: 1000;
+            opacity: 0; visibility: hidden; transition: all 0.3s;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-content {
+            background: white; padding: 30px; border-radius: 10px; width: 90%; max-width: 400px;
+            text-align: center; transform: scale(0.8); transition: transform 0.3s;
+        }
+        .modal-overlay.active .modal-content { transform: scale(1); }
+        .modal-title { margin-bottom: 10px; font-size: 1.2rem; font-weight: bold; }
+        .btn-close {
+            background: #2d3436; color: white; border: none; padding: 10px 20px;
+            border-radius: 5px; cursor: pointer; margin-top: 15px;
+        }
+        .modal-success .modal-title { color: #27ae60; }
+        .modal-info .modal-title { color: #2980b9; }
+        .modal-error .modal-title { color: #e74c3c; }
+
+        @media (max-width: 600px) {
+            .tree-container { width: 300px; height: 60%; bottom: 0; }
+            #area-segar { height: 100px; top: 5%; }
+            #area-layu { height: 100px; bottom: 5%; }
+        }
+    </style>
+</head>
+<body>
+    <div id="app-container">
+        <div class="top-bar">
+            <!-- TOmbol BILINGUAL -->
+            <div class="lang-switcher">
+                <button id="btn-lang-id" class="lang-btn active" onclick="setLanguage('id')">IN</button>
+                <button id="btn-lang-en" class="lang-btn" onclick="setLanguage('en')">EN</button>
+            </div>
+            
+            <h1 data-i18n="title">Studi Lapangan: Biomassa Arang</h1>
+            <p data-i18n="subtitle">Pilih lokasi dan bahan baku yang tepat</p>
+        </div>
+
+        <!-- SCENE 1 -->
+        <div id="scene-1">
+            <div id="misi-text" data-i18n="misi" style="margin-bottom: 15px; text-align: center; color: #555;">
+                <strong>Misi:</strong> Temukan lokasi Perkebunan Sawit untuk mengambil bahan baku arang.
+            </div>
+            <div id="map-wrapper">
+                <div class="map-pin" id="pin-a" onclick="handlePinClick(true)">🌴</div>
+                <div class="map-pin" id="pin-b" onclick="handlePinClick(false)">🥥</div>
+                <div class="map-pin" id="pin-c" onclick="handlePinClick(false)">🍈</div>
+                <div class="map-pin" id="pin-d" onclick="handlePinClick(false)">🌽</div>
+                <div class="map-pin" id="pin-e" onclick="handlePinClick(false)">🌳</div>
+            </div>
+        </div>
+
+        <!-- SCENE 2 -->
+        <div id="scene-2">
+            <div class="scene-header" id="header-text">
+                <h2 data-i18n="s2_title">Ekstraksi Bahan Baku</h2>
+                <p data-i18n="s2_desc">Klik bagian pohon untuk memotong pelepah.</p>
+            </div>
+            <div class="tree-container" id="pohon-utama">
+                <div class="tree-img"></div>
+                <div id="area-segar" class="hotspot" onclick="potongPelepah('segar', event)">
+                    <span data-i18n="hotspot_segar">Potong Pelepah Segar (Atas)</span>
+                </div>
+                <div id="area-layu" class="hotspot" onclick="potongPelepah('layu', event)">
+                    <span data-i18n="hotspot_layu">Ambil Pelepah Layu/Kering (Bawah)</span>
+                </div>
+            </div>
+            <div id="parang">🔪</div>
+
+            <!-- HASIL & LAB -->
+            <div id="harvest-view">
+                <div id="pelepah-result-container">
+                    <div id="pelepah-result-visual"></div>
+                </div>
+                <button id="btn-lab" onclick="bawaKeLab()" data-i18n="btn_lab">Bawa ke Laboratorium 🧪</button>
+            </div>
+            <div id="karung-container">
+                <div id="karung-visual"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL POPUP -->
+    <div class="modal-overlay" id="custom-modal">
+        <div class="modal-content" id="modal-content-box">
+            <div class="modal-title" id="modal-title">Info</div>
+            <div class="modal-msg" id="modal-msg">Pesan...</div>
+            <button class="btn-close" onclick="closeModal()" data-i18n="btn_close">Selesai</button>
+        </div>
+    </div>
+
+    <script>
+        /* ==========================================================================
+           KAMUS BILINGUAL (DITAMBAHKAN UNTUK TRANSLASI TRANSLATION)
+           ========================================================================== */
+        const TRANSLATIONS = {
+            id: {
+                title: "Studi Lapangan: Biomassa Arang",
+                subtitle: "Pilih lokasi dan bahan baku yang tepat",
+                misi: "<strong>Misi:</strong> Temukan lokasi Perkebunan Sawit untuk mengambil bahan baku arang.",
+                s2_title: "Ekstraksi Bahan Baku",
+                s2_desc: "Klik bagian pohon untuk memotong pelepah.",
+                hotspot_segar: "Potong Pelepah Segar (Atas)",
+                hotspot_layu: "Ambil Pelepah Layu/Kering (Bawah)",
+                btn_lab: "Bawa ke Laboratorium 🧪",
+                btn_close: "Selesai",
+                header_panen: "<h2>Hasil Panen</h2><p>Pelepah berhasil diambil.</p>",
+                header_kemas: "<h2>Mengemas Sampel</h2><p>Memasukkan ke dalam karung...</p>",
+                pin_a: "Kebun Sawit",
+                pin_b: "Kebun Kelapa",
+                pin_c: "Kebun Durian",
+                pin_d: "Kebun Jagung",
+                pin_e: "Kebun Karet"
+            },
+            en: {
+                title: "Field Study: Biomass Charcoal",
+                subtitle: "Choose the right location and raw material",
+                misi: "<strong>Mission:</strong> Find the Palm Oil Plantation location to collect charcoal raw materials.",
+                s2_title: "Raw Material Extraction",
+                s2_desc: "Click a part of the tree to cut the frond.",
+                hotspot_segar: "Cut Fresh Frond (Top)",
+                hotspot_layu: "Take Withered/Dry Frond (Bottom)",
+                btn_lab: "Take to Laboratory 🧪",
+                btn_close: "Done",
+                header_panen: "<h2>Harvest Result</h2><p>Frond successfully collected.</p>",
+                header_kemas: "<h2>Packing Sample</h2><p>Putting into the sack...</p>",
+                pin_a: "Palm Plantation",
+                pin_b: "Coconut Plantation",
+                pin_c: "Durian Plantation",
+                pin_d: "Corn Plantation",
+                pin_e: "Rubber Plantation"
+            }
+        };
+
+        const ALL_MODAL_TEKS = {
+            id: {
+                peta_benar_judul: "Lokasi Tepat!",
+                peta_benar_msg:   "Kita telah sampai di Perkebunan Sawit.",
+                peta_salah_judul: "Salah Lokasi",
+                peta_salah_msg:   "Ini bukan perkebunan sawit. Cari lagi!",
+                hasil_segar_judul: "Analisis Laboratorium",
+                hasil_segar_msg:   "Sampel Pelepah SEGAR diterima. \nCatatan: Kadar air tinggi. Kurang efisien untuk arang karena butuh pengeringan lama.",
+                hasil_layu_judul:  "Analisis Laboratorium",
+                hasil_layu_msg:    "Sampel Pelepah LAYU/KERING diterima. \nKERJA BAGUS! Kadar air rendah (12-15%). Sangat efisien untuk biobriket."
+            },
+            en: {
+                peta_benar_judul: "Correct Location!",
+                peta_benar_msg:   "We have arrived at the Palm Oil Plantation.",
+                peta_salah_judul: "Wrong Location",
+                peta_salah_msg:   "This is not a palm oil plantation. Keep looking!",
+                hasil_segar_judul: "Laboratory Analysis",
+                hasil_segar_msg:   "FRESH Frond sample received. \nNote: High water content. Less efficient for charcoal due to long drying time.",
+                hasil_layu_judul:  "Laboratory Analysis",
+                hasil_layu_msg:    "WITHERED/DRY Frond sample received. \nGOOD JOB! Low water content (12-15%). Highly efficient for biobriquettes."
+            }
+        };
+
+        /* Variabel Status Bilingual */
+        let currentLang = 'id';
+        let currentAppStep = 'awal'; // Menyimpan state animasi sekarang
+
+        function setLanguage(lang) {
+            currentLang = lang;
+            
+            // 1. Ubah Style Tombol Aktif
+            document.getElementById('btn-lang-id').classList.remove('active');
+            document.getElementById('btn-lang-en').classList.remove('active');
+            document.getElementById('btn-lang-' + lang).classList.add('active');
+
+            // 2. Ubah Teks HTML Static (Title, Misi, Button dll)
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (TRANSLATIONS[lang][key]) {
+                    el.innerHTML = TRANSLATIONS[lang][key];
+                }
+            });
+
+            // 3. Ubah Label Pin Map (CSS Variables)
+            document.documentElement.style.setProperty('--nama-pin-a', `"${TRANSLATIONS[lang].pin_a}"`);
+            document.documentElement.style.setProperty('--nama-pin-b', `"${TRANSLATIONS[lang].pin_b}"`);
+            document.documentElement.style.setProperty('--nama-pin-c', `"${TRANSLATIONS[lang].pin_c}"`);
+            document.documentElement.style.setProperty('--nama-pin-d', `"${TRANSLATIONS[lang].pin_d}"`);
+            document.documentElement.style.setProperty('--nama-pin-e', `"${TRANSLATIONS[lang].pin_e}"`);
+
+            // 4. Perbarui Teks Modal ke Bahasa Terpilih
+            DATA_TEKS = ALL_MODAL_TEKS[lang];
+
+            // 5. Perbarui Header Animasi Dinamis jika sedang terbuka
+            if (currentAppStep === 'panen') {
+                headerText.innerHTML = TRANSLATIONS[lang].header_panen;
+            } else if (currentAppStep === 'kemas') {
+                headerText.innerHTML = TRANSLATIONS[lang].header_kemas;
+            }
+        }
+
+        /* ==========================================================================
+           BAGIAN 2: KONFIGURASI TEKS & PESAN (DIUBAH MENJADI LET AGAR BISA DIGANTI)
+           ========================================================================== */
+        let DATA_TEKS = ALL_MODAL_TEKS.id; // Default bahasa Indonesia
+
+        /* ==========================================================================
+           LOGIKA PROGRAM (TIDAK PERLU DIUBAH)
+           ========================================================================== */
+        let selectedType = '';
+        const scene1 = document.getElementById('scene-1');
+        const scene2 = document.getElementById('scene-2');
+        const modalOverlay = document.getElementById('custom-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalMsg = document.getElementById('modal-msg');
+        const modalBox = document.getElementById('modal-content-box');
+        const parang = document.getElementById('parang');
+        const pohonUtama = document.getElementById('pohon-utama');
+        const harvestView = document.getElementById('harvest-view');
+        const pelepahVisual = document.getElementById('pelepah-result-visual');
+        const btnLab = document.getElementById('btn-lab');
+        const karungContainer = document.getElementById('karung-container');
+        const pelepahContainer = document.getElementById('pelepah-result-container');
+        const headerText = document.getElementById('header-text');
+
+        function showModal(title, message, type) {
+            modalTitle.innerText = title;
+            modalMsg.innerText = message;
+            modalBox.className = 'modal-content';
+            if (type === 'success') modalBox.classList.add('modal-success');
+            else if (type === 'error') modalBox.classList.add('modal-error');
+            else modalBox.classList.add('modal-info');
+            modalOverlay.classList.add('active');
+        }
+        function closeModal() { modalOverlay.classList.remove('active'); }
+
+        function handlePinClick(isCorrect) {
+            if (isCorrect) {
+                showModal(DATA_TEKS.peta_benar_judul, DATA_TEKS.peta_benar_msg, "success");
+                setTimeout(() => { closeModal(); transitionToScene2(); }, 1000);
+            } else {
+                showModal(DATA_TEKS.peta_salah_judul, DATA_TEKS.peta_salah_msg, "error");
+            }
+        }
+
+        function transitionToScene2() {
+            scene1.style.display = 'none';
+            scene2.style.display = 'block';
+        }
+
+        function potongPelepah(tipe, event) {
+            selectedType = tipe;
+            const rect = scene2.getBoundingClientRect();
+            const x = event.clientX - rect.left; 
+            const y = event.clientY - rect.top;
+
+            parang.style.left = (x - 40) + 'px';
+            parang.style.top = (y - 60) + 'px';
+            parang.style.opacity = 1;
+            parang.classList.remove('animate-chop');
+            void parang.offsetWidth; 
+            parang.classList.add('animate-chop');
+
+            setTimeout(() => { pohonUtama.classList.add('shaking'); }, 200);
+
+            setTimeout(() => {
+                pohonUtama.classList.remove('shaking');
+                parang.style.opacity = 0;
+                tampilkanPelepah(tipe);
+            }, 800);
+        }
+
+        function tampilkanPelepah(tipe) {
+            currentAppStep = 'panen'; // Menyimpan state untuk translasi
+            pohonUtama.style.display = 'none';
+            headerText.innerHTML = TRANSLATIONS[currentLang].header_panen;
+            pelepahVisual.classList.remove('show-segar', 'show-layu');
+            if(tipe === 'segar') pelepahVisual.classList.add('show-segar');
+            else pelepahVisual.classList.add('show-layu');
+            harvestView.style.display = 'flex';
+        }
+
+        function bawaKeLab() {
+            currentAppStep = 'kemas'; // Menyimpan state untuk translasi
+            btnLab.style.display = 'none';
+            headerText.innerHTML = TRANSLATIONS[currentLang].header_kemas;
+            karungContainer.classList.add('karung-muncul');
+            
+            // Animasi Pelepah Masuk Karung
+            setTimeout(() => { 
+                pelepahContainer.classList.add('pelepah-masuk-karung'); 
+            }, 500); 
+
+            // Animasi Karung Goyang & Selesai
+            setTimeout(() => {
+                karungContainer.classList.add('karung-goyang');
+                setTimeout(() => { analisisAkhir(); }, 600);
+            }, 1300); 
+        }
+
+        function analisisAkhir() {
+            if (selectedType === 'segar') {
+                showModal(DATA_TEKS.hasil_segar_judul, DATA_TEKS.hasil_segar_msg, "info");
+            } else {
+                showModal(DATA_TEKS.hasil_layu_judul, DATA_TEKS.hasil_layu_msg, "success");
+            }
+        }
+    </script>
+</body>
+</html>
