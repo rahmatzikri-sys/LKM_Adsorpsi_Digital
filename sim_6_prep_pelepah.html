@@ -464,6 +464,7 @@
                     { text: "Langkah 7: Pendinginan di Desikator", action: "SIMPAN DESIKATOR", status: "ARANG PANAS" }
                 ],
                 dynamic: {
+                    step1Done: "POTONG",       // <-- TEKS TOMBOL STEP 1 SETELAH SELESAI
                     drying: "PENGERINGAN...",
                     dry: "KERING",
                     saving: "MENYIMPAN...",
@@ -503,6 +504,7 @@
                     { text: "Step 7: Cooling in Desiccator", action: "STORE IN DESICCATOR", status: "HOT CHARCOAL" }
                 ],
                 dynamic: {
+                    step1Done: "CUT",          // <-- TEKS TOMBOL STEP 1 SETELAH SELESAI (EN)
                     drying: "DRYING...",
                     dry: "DRY",
                     saving: "SAVING...",
@@ -577,7 +579,12 @@
             
             // Atur teks tombol utama berdasarkan keadaan
             if(!document.getElementById('btnNext').disabled) {
-                btnAction.innerText = langData.dynamic.doneAction;
+                // PERUBAHAN: Step 1 pakai teks khusus, step lain pakai doneAction
+                if (currentStep === 1) {
+                    btnAction.innerText = langData.dynamic.step1Done;
+                } else {
+                    btnAction.innerText = langData.dynamic.doneAction;
+                }
             } else {
                 btnAction.innerText = data.action;
                 btnAction.disabled = false;
@@ -655,7 +662,10 @@
                         document.getElementById('daunLimbah').classList.add('anim-jatuh');
                         document.getElementById('pelepah1').style.backgroundImage = "var(--img-pelepah-lidi)";
                     }, 400);
-                    setTimeout(finishAction, 1200);
+                    setTimeout(() => {
+                        // PERUBAHAN: Tombol step 1 menampilkan teks "POTONG" bukan "SELESAI"
+                        finishAction(langData.dynamic.step1Done);
+                    }, 1200);
                     break;
 
                 case 2: 
@@ -793,9 +803,10 @@
             }, 1500); // Tunggu animasi masuk selesai
         }
 
-        function finishAction() {
+        // PERUBAHAN: finishAction menerima parameter teks opsional
+        function finishAction(customText) {
             const btn = document.getElementById('btnAction');
-            btn.innerText = translations[currentLang].dynamic.doneAction;
+            btn.innerText = customText || translations[currentLang].dynamic.doneAction;
             document.getElementById('btnNext').disabled = false;
         }
 
